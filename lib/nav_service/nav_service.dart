@@ -21,14 +21,13 @@ class NavServiceConfig {
 }
 
 class NavService {
-  // Singleton instance
-  static final NavService instance = NavService._internal();
-
   // Factory returns the single instance
   factory NavService() => instance;
 
   // Private constructor
   NavService._internal();
+  // Singleton instance
+  static final NavService instance = NavService._internal();
 
   // Commonly used navigator key (you can remove or extend as needed)
   GlobalKey<NavigatorState>? _navigatorKey;
@@ -45,8 +44,9 @@ class NavService {
   bool _enableLogger = true;
 
   void init(NavServiceConfig config) {
-    _routes.clear();
-    _routes.addAll({for (var route in config.routes) route.path: route});
+    _routes
+      ..clear()
+      ..addAll({for (final route in config.routes) route.path: route});
 
     _enableLogger = config.enableLogger;
 
@@ -55,7 +55,8 @@ class NavService {
 
   /// context.go():
   ///  - route is the last route in full path
-  ///  - previousRoute is the route before go(), not is the previous route in full path
+  ///  - previousRoute is the route before go(), not is the previous route in
+  ///  full path
   ///
   /// context.push():
   /// - route is the new route being pushed
@@ -69,15 +70,15 @@ class NavService {
     final context = route.navigator?.context;
     if (context == null) return;
 
-    route.settings.arguments;
-
     final state = NavState.fromRoute(route);
 
     final prevState = _steps.isNotEmpty ? _steps.last.currentState : null;
 
     if (state != null) {
       if (_enableLogger) {
-        debugPrint('NavService.didPush - $routeName extra is NavigatorExtra');
+        debugPrint(
+          'NavService._didPush - $routeName is a valid NavService route.',
+        );
       }
       _steps.add(
         NavStep(
@@ -89,12 +90,16 @@ class NavService {
         ),
       );
     } else {
-      // from context.go()
+      // If extra is not NavExtra, clear the navigation history
+      // as we cannot track it properly
+      // Ex: GoRouter's context.go(), Navigator push, replace actions
       if (_enableLogger) {
         debugPrint(
-          'NavService.didPush - ${route.settings.name} extra is NOT NavigatorExtra',
+          'NavService._didPush - ${route.settings.name} extra is an'
+          ' invalid NavService route. So clearing navigation history.',
         );
       }
+
       _steps.removeRange(0, _steps.length);
     }
 
@@ -160,12 +165,12 @@ class NavService {
     return _steps.map((e) => e.currentState.path).join();
   }
 
-  MaterialPageRoute _buildPageRoute({
+  MaterialPageRoute<T> _buildPageRoute<T>({
     required String path,
     required NavExtra extra,
     required NavRoute route,
   }) {
-    return MaterialPageRoute(
+    return MaterialPageRoute<T>(
       settings: RouteSettings(name: path, arguments: extra),
       builder: (ctx) => route.builder(ctx, NavState(path: path, extra: extra)),
     );
@@ -184,232 +189,370 @@ class NavService {
     Map<String, dynamic>? extra,
     bool forcePush = false,
   }) {
-    final context = _currentContext;
-    if (context == null) return;
-
-    final navExtra = NavExtra(extra ?? {});
-    final route = _routes[path];
-
-    if (route == null) {
-      if (_enableLogger) {
-        debugPrint('NavService.navigate: Route not found for path: $path');
+    try {
+      final context = _currentContext;
+      if (context == null) {
+        if (_enableLogger) {
+          debugPrint('NavService.navigate: No valid context found.');
+        }
+        return;
       }
-      return;
-    }
 
-    final navigator = Navigator.of(context);
-    final newRoute = _buildPageRoute(path: path, extra: navExtra, route: route);
+      final navExtra = NavExtra(extra ?? {});
+      final route = _routes[path];
 
-    // Find if path exists in navigation history
-    int existingIndex = -1;
-    if (!forcePush) {
-      for (int i = _steps.length - 1; i >= 0; i--) {
-        if (_steps[i].currentState.path == path) {
-          existingIndex = i;
-          break;
+      if (route == null) {
+        if (_enableLogger) {
+          debugPrint('NavService.navigate: Route not found for path: $path');
+        }
+        return;
+      }
+
+      final navigator = Navigator.of(context);
+      final newRoute = _buildPageRoute<dynamic>(
+        path: path,
+        extra: navExtra,
+        route: route,
+      );
+
+      // Find if path exists in navigation history
+      int existingIndex = -1;
+      if (!forcePush) {
+        for (int i = _steps.length - 1; i >= 0; i--) {
+          if (_steps[i].currentState.path == path) {
+            existingIndex = i;
+            break;
+          }
         }
       }
-    }
 
-    if (existingIndex != -1) {
-      // Calculate how many routes to remove (all routes after and including the target)
-      final routesToRemoveCount = _steps.length - existingIndex;
-      int removeCounter = 0;
+      if (existingIndex != -1) {
+        // Calculate how many routes to remove (all routes after and including
+        // the target)
+        final routesToRemoveCount = _steps.length - existingIndex;
+        int removeCounter = 0;
 
-      navigator.pushAndRemoveUntil(newRoute, (route) {
-        // Remove routes from top until we reach the desired point
-        removeCounter++;
-        return removeCounter > routesToRemoveCount;
-      });
-    } else {
-      // Path doesn't exist or forcePush is true, push new
-      navigator.push(newRoute);
+        navigator.pushAndRemoveUntil(newRoute, (route) {
+          // Remove routes from top until we reach the desired point
+          removeCounter++;
+          return removeCounter > routesToRemoveCount;
+        });
+      } else {
+        // Path doesn't exist or forcePush is true, push new
+        navigator.push(newRoute);
+      }
+      // ignore: avoid_catches_without_on_clauses
+    } catch (e, st) {
+      if (_enableLogger) {
+        debugPrint('NavService.navigate.exception: $e\n$st');
+      }
     }
   }
 
   /// Pop all routes with animation
   void popAll() {
-    final context = _currentContext;
-    if (context == null) return;
+    try {
+      final context = _currentContext;
+      if (context == null) {
+        if (_enableLogger) {
+          debugPrint('NavService.popAll: No valid context found.');
+        }
+        return;
+      }
 
-    if (_steps.isEmpty) return;
+      if (_steps.isEmpty) {
+        if (_enableLogger) {
+          debugPrint('NavService.popAll: No steps to pop.');
+        }
+        return;
+      }
 
-    final navigator = Navigator.of(context);
-    final routesToPop = _steps.length;
+      final navigator = Navigator.of(context);
+      final routesToPop = _steps.length;
 
-    if (routesToPop == 1) {
-      // Only one route, pop with animation
-      navigator.pop();
-    } else {
-      // Get all routes in the navigator
-      final List<Route> allRoutes = [];
-      navigator.popUntil((route) {
-        allRoutes.add(route);
-        return allRoutes.length > routesToPop;
-      });
+      if (routesToPop == 1) {
+        // Only one route, pop with animation
+        navigator.pop();
+      } else {
+        // Get all routes in the navigator
+        final List<Route> allRoutes = [];
+        navigator.popUntil((route) {
+          allRoutes.add(route);
+          return allRoutes.length > routesToPop;
+        });
+      }
+      // ignore: avoid_catches_without_on_clauses
+    } catch (e, st) {
+      if (_enableLogger) {
+        debugPrint('NavService.popAll.exception: $e\n$st');
+      }
     }
   }
 
   /// Pops routes until the given [path] is reached
   void popUntilPath(String path) {
-    final context = _currentContext;
-    if (context == null) return;
+    try {
+      final context = _currentContext;
+      if (context == null) {
+        if (_enableLogger) {
+          debugPrint('NavService.popUntilPath: No valid context found.');
+        }
+        return;
+      }
 
-    Navigator.of(context).popUntil((route) => route.settings.name == path);
-  }
-
-  /// Remove all routes without animation
-  void removeAll() {
-    final context = _currentContext;
-    if (context == null) return;
-
-    if (_steps.isEmpty) return;
-
-    final navigator = Navigator.of(context);
-
-    // Create a copy of steps to avoid ConcurrentModificationError
-    final stepsToRemove = List<NavStep>.from(_steps.reversed);
-
-    // Remove routes without animation in reverse order using routes from steps
-    for (final step in stepsToRemove) {
-      if (step.currentRoute.isActive) {
-        navigator.removeRoute(step.currentRoute);
+      Navigator.of(context).popUntil((route) => route.settings.name == path);
+      // ignore: avoid_catches_without_on_clauses
+    } catch (e, st) {
+      if (_enableLogger) {
+        debugPrint('NavService.popUntilPath.exception: $e\n$st');
       }
     }
+  }
 
-    // Clear internal navigation history will be handled in _didRemove
+  /// Required call before call GoRouter's context.go()
+  ///
+  /// Remove all routes without animation
+  void removeAll() {
+    try {
+      final context = _currentContext;
+      if (context == null) {
+        if (_enableLogger) {
+          debugPrint('NavService.removeAll: No valid context found.');
+        }
+        return;
+      }
+
+      if (_steps.isEmpty) {
+        if (_enableLogger) {
+          debugPrint('NavService.removeAll: No steps to remove.');
+        }
+        return;
+      }
+
+      final navigator = Navigator.of(context);
+
+      // Create a copy of steps to avoid ConcurrentModificationError
+      final stepsToRemove = List<NavStep>.from(_steps.reversed);
+
+      // Remove routes without animation in reverse order using routes
+      // from steps
+      for (final step in stepsToRemove) {
+        if (step.currentRoute.isActive) {
+          navigator.removeRoute(step.currentRoute);
+        }
+      }
+
+      // Clear internal navigation history will be handled in _didRemove
+      // ignore: avoid_catches_without_on_clauses
+    } catch (e, st) {
+      if (_enableLogger) {
+        debugPrint('NavService.removeAll.exception: $e\n$st');
+      }
+    }
   }
 
   /// Replace the current route with a new one without animation
   void replace(String path, {Map<String, dynamic>? extra}) {
-    final context = _currentContext;
-    if (context == null) return;
-
-    final navExtra = NavExtra(extra ?? {});
-    final route = _routes[path];
-
-    if (route == null) {
-      if (_enableLogger) {
-        debugPrint('NavService.replace: Route not found for path: $path');
+    try {
+      final context = _currentContext;
+      if (context == null) {
+        if (_enableLogger) {
+          debugPrint('NavService.replace: No valid context found.');
+        }
+        return;
       }
-      return;
-    }
 
-    final currentRoute = _steps.isNotEmpty ? _steps.last.currentRoute : null;
-    if (currentRoute == null) {
-      if (_enableLogger) {
-        debugPrint('NavService.replace: No previous state found to replace.');
+      final navExtra = NavExtra(extra ?? {});
+      final route = _routes[path];
+
+      if (route == null) {
+        if (_enableLogger) {
+          debugPrint('NavService.replace: Route not found for path: $path');
+        }
+        return;
       }
-      return;
-    }
 
-    Navigator.of(context).replace(
-      newRoute: _buildPageRoute(path: path, extra: navExtra, route: route),
-      oldRoute: currentRoute,
-    );
+      final currentRoute = _steps.isNotEmpty ? _steps.last.currentRoute : null;
+      if (currentRoute == null) {
+        if (_enableLogger) {
+          debugPrint('NavService.replace: No previous state found to replace.');
+        }
+        return;
+      }
+
+      Navigator.of(context).replace(
+        newRoute: _buildPageRoute<dynamic>(
+          path: path,
+          extra: navExtra,
+          route: route,
+        ),
+        oldRoute: currentRoute,
+      );
+      // ignore: avoid_catches_without_on_clauses
+    } catch (e, st) {
+      if (_enableLogger) {
+        debugPrint('NavService.replace.exception: $e\n$st');
+      }
+    }
   }
 
   /// Replace last route with new routes with push animation
   void pushReplacementAll(List<NavRouteInfo> routeInfos) {
-    final context = _currentContext;
-    if (context == null) return;
+    try {
+      final context = _currentContext;
+      if (context == null) {
+        if (_enableLogger) {
+          debugPrint('NavService.pushReplacementAll: No valid context found.');
+        }
+        return;
+      }
 
-    final navigator = Navigator.of(context);
+      final navigator = Navigator.of(context);
 
-    // Remove last existing route
-    if (_steps.isNotEmpty) {
-      final lastStep = _steps.last;
-      if (lastStep.currentRoute.isActive) {
-        navigator.removeRoute(lastStep.currentRoute);
+      // Remove last existing route
+      if (_steps.isNotEmpty) {
+        final lastStep = _steps.last;
+        if (lastStep.currentRoute.isActive) {
+          navigator.removeRoute(lastStep.currentRoute);
+        }
+      }
+
+      pushAll(routeInfos);
+      // ignore: avoid_catches_without_on_clauses
+    } catch (e, st) {
+      if (_enableLogger) {
+        debugPrint('NavService.pushReplacementAll.exception: $e\n$st');
       }
     }
-
-    pushAll(routeInfos);
   }
 
-  /// Adds the corresponding pages to given [routeInfos] list to the _steps stack at once
+  /// Adds the corresponding pages to given [routeInfos] list to the _steps
+  /// stack at once
   /// Similar to AutoRoute's pushAll method
   void pushAll(List<NavRouteInfo> routeInfos) {
-    final context = _currentContext;
-    if (context == null) return;
-
-    if (routeInfos.isEmpty) return;
-
-    final navigator = Navigator.of(context);
-
-    // Push all routes sequentially
-    for (int i = 0; i < routeInfos.length; i++) {
-      final routeInfo = routeInfos[i];
-      final route = _routes[routeInfo.path];
-
-      if (route != null) {
-        final navExtra = NavExtra(routeInfo.extra ?? {});
-
-        if (i == routeInfos.length - 1) {
-          // Last route with animation
-          navigator.push(
-            _buildPageRoute(
-              path: routeInfo.path,
-              extra: navExtra,
-              route: route,
-            ),
-          );
-        } else {
-          // Other routes without push animation but with pop animation
-          navigator.push(
-            _NoTransitionMaterialPageRoute(
-              settings: RouteSettings(
-                name: routeInfo.path,
-                arguments: navExtra,
-              ),
-              builder:
-                  (context) => route.builder(
-                    context,
-                    NavState(path: routeInfo.path, extra: navExtra),
-                  ),
-            ),
-          );
-        }
-      } else {
+    try {
+      final context = _currentContext;
+      if (context == null) {
         if (_enableLogger) {
-          debugPrint(
-            'NavService.pushAll: Route not found for path: ${routeInfo.path}',
-          );
+          debugPrint('NavService.pushAll: No valid context found.');
         }
+        return;
+      }
+
+      if (routeInfos.isEmpty) {
+        if (_enableLogger) {
+          debugPrint('NavService.pushAll: No routeInfos provided.');
+        }
+        return;
+      }
+
+      final navigator = Navigator.of(context);
+
+      // Push all routes sequentially
+      for (int i = 0; i < routeInfos.length; i++) {
+        final routeInfo = routeInfos[i];
+        final route = _routes[routeInfo.path];
+
+        if (route != null) {
+          final navExtra = NavExtra(routeInfo.extra ?? {});
+
+          if (i == routeInfos.length - 1) {
+            // Last route with animation
+            navigator.push(
+              _buildPageRoute<dynamic>(
+                path: routeInfo.path,
+                extra: navExtra,
+                route: route,
+              ),
+            );
+          } else {
+            // Other routes without push animation but with pop animation
+            navigator.push(
+              // ignore: inference_failure_on_instance_creation
+              _NoTransitionMaterialPageRoute(
+                settings: RouteSettings(
+                  name: routeInfo.path,
+                  arguments: navExtra,
+                ),
+                builder:
+                    (context) => route.builder(
+                      context,
+                      NavState(path: routeInfo.path, extra: navExtra),
+                    ),
+              ),
+            );
+          }
+        } else {
+          if (_enableLogger) {
+            debugPrint(
+              'NavService.pushAll: Route not found for path: ${routeInfo.path}',
+            );
+          }
+        }
+      }
+      // ignore: avoid_catches_without_on_clauses
+    } catch (e, st) {
+      if (_enableLogger) {
+        debugPrint('NavService.pushAll.exception: $e\n$st');
       }
     }
   }
 
   /// Replace all existing routes with new routes with push animation
   ///
-  /// The behavior is similar to GoRouter's go method and AutoRoute's replaceAll method
+  /// The behavior is similar to GoRouter's go method and AutoRoute's replaceAll
+  /// method
   void replaceAll(List<NavRouteInfo> routeInfos) {
-    final context = _currentContext;
-    if (context == null) return;
-
-    final navigator = Navigator.of(context);
-
-    // Remove all existing routes
-    for (final step in List<NavStep>.from(_steps.reversed)) {
-      if (step.currentRoute.isActive) {
-        navigator.removeRoute(step.currentRoute);
-      }
-    }
-
-    // Push new routes in order
-    for (final routeInfo in routeInfos) {
-      final route = _routes[routeInfo.path];
-      if (route != null) {
-        final navExtra = NavExtra(routeInfo.extra ?? {});
-        navigator.push(
-          _buildPageRoute(path: routeInfo.path, extra: navExtra, route: route),
-        );
-      } else {
+    try {
+      final context = _currentContext;
+      if (context == null) {
         if (_enableLogger) {
-          debugPrint(
-            'NavService.replaceAll: Route not found for path: ${routeInfo.path}',
-          );
+          debugPrint('NavService.replaceAll: No valid context found.');
         }
+        return;
+      }
+
+      if (routeInfos.isEmpty) {
+        if (_enableLogger) {
+          debugPrint('NavService.replaceAll: No routeInfos provided.');
+        }
+        return;
+      }
+
+      final navigator = Navigator.of(context);
+
+      // Remove all existing routes
+      for (final step in List<NavStep>.from(_steps.reversed)) {
+        if (step.currentRoute.isActive) {
+          navigator.removeRoute(step.currentRoute);
+        }
+      }
+
+      // Push new routes in order
+      for (final routeInfo in routeInfos) {
+        final route = _routes[routeInfo.path];
+        if (route != null) {
+          final navExtra = NavExtra(routeInfo.extra ?? {});
+          navigator.push(
+            _buildPageRoute<dynamic>(
+              path: routeInfo.path,
+              extra: navExtra,
+              route: route,
+            ),
+          );
+        } else {
+          if (_enableLogger) {
+            debugPrint(
+              'NavService.replaceAll: Route not found for path: '
+              '${routeInfo.path}',
+            );
+          }
+        }
+      }
+      // ignore: avoid_catches_without_on_clauses
+    } catch (e, st) {
+      if (_enableLogger) {
+        debugPrint('NavService.replaceAll.exception: $e\n$st');
       }
     }
   }

@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+
 import 'nav_state.dart';
 
+/// A class representing a navigation route.
 class NavRoute {
   NavRoute({required this.path, required this.builder});
   final String path;
