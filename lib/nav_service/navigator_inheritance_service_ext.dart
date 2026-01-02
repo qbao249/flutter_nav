@@ -200,4 +200,71 @@ extension NavigatorInheritanceServiceExt on NavService {
       }
     }
   }
+
+  /// Replace the current route with a new one without animation
+  void replace(String path, {Map<String, dynamic>? extra}) {
+    try {
+      final context = _currentContext;
+      if (context == null) {
+        if (_enableLogger) {
+          debugPrint('NavService.replace: No valid context found.');
+        }
+        return;
+      }
+
+      final navExtra = NavExtra(extra ?? {});
+      final route = _routes[path];
+
+      if (route == null) {
+        if (_enableLogger) {
+          debugPrint('NavService.replace: Route not found for path: $path');
+        }
+        return;
+      }
+
+      final navigator = Navigator.of(context);
+
+      if (_steps.isEmpty) {
+        // handle replace when there is no existing _steps
+        // and contains initial route
+
+        navigator.pushAndRemoveUntil(
+          _buildPageRouteNoPushAnimation(
+            path: path,
+            extra: navExtra,
+            route: route,
+          ),
+          (route) => false,
+        );
+      } else {
+        // handle replace when there is existing _steps
+
+        final currentRoute =
+            _steps.isNotEmpty ? _steps.last.currentRoute : null;
+        if (currentRoute == null) {
+          if (_enableLogger) {
+            debugPrint(
+              'NavService.replace: No previous state found to replace.',
+            );
+          }
+          return;
+        }
+
+        navigator.replace(
+          newRoute: _buildPageRoute<dynamic>(
+            path: path,
+            extra: navExtra,
+            route: route,
+          ),
+          oldRoute: currentRoute,
+        );
+      }
+
+      // ignore: avoid_catches_without_on_clauses
+    } catch (e, st) {
+      if (_enableLogger) {
+        debugPrint('NavService.replace.exception: $e\n$st');
+      }
+    }
+  }
 }

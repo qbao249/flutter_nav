@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-01-03
+
+### Added
+- **Deep Linking System**: Complete deep linking infrastructure for handling custom URLs and app links
+- **NavLinkHandler**: Abstract class for creating custom link handlers with redirect path patterns
+- **NavLinkResult**: Data class containing matched route path, path parameters, and query parameters from URL parsing
+- **LinkingServiceExt**: Extension methods for URL processing and link handling with `openUrl()` method
+- **Link Prefixes**: Support for multiple URL prefixes (scheme-based like `myapp://` or domain-based like `https://example.com`)
+- **Path Parameter Extraction**: Automatic extraction of path parameters using `:paramName` syntax in redirect paths
+- **Query Parameter Support**: Full query parameter parsing and passing to link handlers
+- **Duplicate Path Detection**: Built-in validation to prevent duplicate redirect paths across handlers
+- **URL Pattern Matching**: Advanced pattern matching for complex URL structures with parameters
+
+### Enhanced
+- **NavServiceConfig**: Extended with `linkPrefixes` and `linkHandlers` properties for deep linking configuration
+- **Export Structure**: Added exports for `NavLinkHandler` and `NavLinkResult` classes in main library
+
+### Fixed
+- **Enhanced Navigation Methods**: Improved reliability and error handling in core navigation functions
+  - Fixed `replace()` method with better edge case handling when no navigation steps exist
+  - Enhanced `pushReplacementAll()` method with improved animation control and route management
+  - Improved `replaceAll()` method with enhanced null validation and proper route removal
+  - Fixed `removeAll()` method with GoRouter integration warnings and improved state management
+- **Animation Improvements**: Added `_NoTransitionMaterialPageRoute` class for smoother route transitions in replace operations when the steps empty
+- **Data Processing**: Enhanced NavExtra constructor with optional `processData` parameter for better data handling flexibility
+- **Navigation State Consistency**: Fixed navigation state consistency across all replace operations
+
+### Documentation
+- Comprehensive deep linking examples in example application
+- Link handler implementations for profile and settings navigation
+- Integration guides for GoRouter and app_links packages
+
+### Notes
+- Deep linking system is fully backward compatible with existing navigation methods
+- Supports both custom URL schemes (`myapp://`) and universal links (`https://domain.com`)
+- Link handlers provide flexible routing logic for complex navigation scenarios
+
 ## [0.2.1] - 2026-01-01
 
 ### Added

@@ -7,3 +7,7 @@ export 'nav_service/nav_route_info.dart';
 export 'nav_service/nav_state.dart';
 export 'nav_service/nav_step.dart';
 export 'nav_service/nav_extra.dart';
+
+// Deep linking components
+export 'nav_service/nav_link_handler.dart';
+export 'nav_service/nav_link_result.dart';

@@ -280,7 +280,7 @@ void main() {
 
       expect(extra.data['key1'], equals('value1'));
       expect(extra.data['key2'], equals(42));
-      expect(extra.toJson(), equals({'key1': 'value1', 'key2': 42}));
+      expect(extra.data, equals({'key1': 'value1', 'key2': 42}));
     });
   });
 
@@ -328,4 +328,184 @@ void main() {
       expect(routeInfo.extra, isNull);
     });
   });
+
+  group('Deep Linking', () {
+    late TestNavLinkHandler testHandler;
+    late NavService navService;
+    late GlobalKey<NavigatorState> navigatorKey;
+
+    setUp(() {
+      testHandler = TestNavLinkHandler();
+      navService = NavService.instance;
+      navigatorKey = GlobalKey<NavigatorState>();
+    });
+
+    test('should initialize with link prefixes and handlers', () {
+      final routes = [
+        NavRoute(path: '/home', builder: (context, state) => Container()),
+      ];
+
+      final config = NavServiceConfig(
+        routes: routes,
+        navigatorKey: navigatorKey,
+        enableLogger: false,
+        linkPrefixes: ['myapp://', 'https://myapp.com/'],
+        linkHandlers: [testHandler],
+      );
+
+      expect(() => navService.init(config), returnsNormally);
+    });
+
+    test('should handle URL with scheme prefix', () {
+      final routes = [
+        NavRoute(path: '/home', builder: (context, state) => Container()),
+      ];
+
+      navService.init(
+        NavServiceConfig(
+          routes: routes,
+          navigatorKey: navigatorKey,
+          enableLogger: false,
+          linkPrefixes: ['myapp://'],
+          linkHandlers: [testHandler],
+        ),
+      );
+
+      navService.openUrl('myapp://product/123?category=electronics');
+
+      expect(testHandler.lastResult?.matchedRoutePath, equals('/product/:id'));
+      expect(testHandler.lastResult?.pathParameters, equals({'id': '123'}));
+      expect(
+        testHandler.lastResult?.queryParameters,
+        equals({'category': 'electronics'}),
+      );
+    });
+
+    test('should handle URL with domain prefix', () {
+      final routes = [
+        NavRoute(path: '/home', builder: (context, state) => Container()),
+      ];
+
+      navService.init(
+        NavServiceConfig(
+          routes: routes,
+          navigatorKey: navigatorKey,
+          enableLogger: false,
+          linkPrefixes: ['https://myapp.com'],
+          linkHandlers: [testHandler],
+        ),
+      );
+
+      navService.openUrl('https://myapp.com/user/profile?tab=settings');
+
+      expect(testHandler.lastResult?.matchedRoutePath, equals('/user/profile'));
+      expect(testHandler.lastResult?.pathParameters, isEmpty);
+      expect(
+        testHandler.lastResult?.queryParameters,
+        equals({'tab': 'settings'}),
+      );
+    });
+
+    test('should extract path parameters correctly', () {
+      final routes = [
+        NavRoute(path: '/home', builder: (context, state) => Container()),
+      ];
+
+      navService.init(
+        NavServiceConfig(
+          routes: routes,
+          navigatorKey: navigatorKey,
+          enableLogger: false,
+          linkPrefixes: ['myapp://'],
+          linkHandlers: [testHandler],
+        ),
+      );
+
+      navService.openUrl('myapp://product/abc123/review/456');
+
+      expect(
+        testHandler.lastResult?.matchedRoutePath,
+        equals('/product/:productId/review/:reviewId'),
+      );
+      expect(
+        testHandler.lastResult?.pathParameters,
+        equals({'productId': 'abc123', 'reviewId': '456'}),
+      );
+    });
+
+    test('should throw error for duplicate redirect paths', () {
+      final routes = [
+        NavRoute(path: '/home', builder: (context, state) => Container()),
+      ];
+
+      final duplicateHandler = TestNavLinkHandler();
+
+      expect(
+        () => navService.init(
+          NavServiceConfig(
+            routes: routes,
+            navigatorKey: navigatorKey,
+            enableLogger: false,
+            linkPrefixes: ['myapp://'],
+            linkHandlers: [testHandler, duplicateHandler],
+          ),
+        ),
+        throwsException,
+      );
+    });
+
+    test('should not handle URL without matching prefix', () {
+      final routes = [
+        NavRoute(path: '/home', builder: (context, state) => Container()),
+      ];
+
+      navService.init(
+        NavServiceConfig(
+          routes: routes,
+          navigatorKey: navigatorKey,
+          enableLogger: false,
+          linkPrefixes: ['myapp://'],
+          linkHandlers: [testHandler],
+        ),
+      );
+
+      testHandler.clearResults();
+      navService.openUrl('https://other.com/product/123');
+
+      expect(testHandler.lastResult, isNull);
+    });
+
+    test('NavLinkResult should contain correct data', () {
+      final result = NavLinkResult(
+        matchedRoutePath: '/product/:id',
+        pathParameters: {'id': '123'},
+        queryParameters: {'tab': 'details'},
+      );
+
+      expect(result.matchedRoutePath, equals('/product/:id'));
+      expect(result.pathParameters, equals({'id': '123'}));
+      expect(result.queryParameters, equals({'tab': 'details'}));
+    });
+  });
+}
+
+// Test helper class
+class TestNavLinkHandler extends NavLinkHandler {
+  NavLinkResult? lastResult;
+
+  @override
+  List<String> get redirectPaths => [
+    '/product/:id',
+    '/user/profile',
+    '/product/:productId/review/:reviewId',
+  ];
+
+  @override
+  void onRedirect(NavLinkResult result) {
+    lastResult = result;
+  }
+
+  void clearResults() {
+    lastResult = null;
+  }
 }

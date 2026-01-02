@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:advanced_nav_service/nav_service.dart';
 
+import 'links/profile_link_handler.dart';
+import 'links/settings_link_handler.dart';
 import 'scenes/home.dart';
 import 'scenes/profile.dart';
 import 'scenes/settings.dart';
@@ -10,9 +12,11 @@ final navigatorKey = GlobalKey<NavigatorState>();
 void main() {
   NavService.instance.init(
     NavServiceConfig(
-      routes: _routes,
       navigatorKey: navigatorKey,
+      routes: navRoutes,
       enableLogger: true,
+      linkPrefixes: ['myapp://', 'https://myapp.com/'],
+      linkHandlers: [SettingsLinkHandler(), ProfileLinkHandler()],
     ),
   );
   runApp(const NavServiceExample());
@@ -33,57 +37,35 @@ class NavServiceExample extends StatelessWidget {
   }
 }
 
-class LaunchScreen extends StatelessWidget {
+class LaunchScreen extends StatefulWidget {
   const LaunchScreen({super.key});
 
   @override
+  State<LaunchScreen> createState() => _LaunchScreenState();
+}
+
+class _LaunchScreenState extends State<LaunchScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Replace with setup process here
+      await Future.delayed(const Duration(seconds: 1));
+      NavService.instance.replaceAll([
+        NavRouteInfo(path: '/home'),
+        NavRouteInfo(path: '/settings'),
+      ]);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('NavService Example'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'Welcome to NavService Example',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: () {
-                NavService.instance.push('/home');
-              },
-              child: const Text('Navigate to Home'),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                NavService.instance.push('/settings', extra: {'theme': 'dark'});
-              },
-              child: const Text('Navigate to Settings with Extra Data'),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                NavService.instance.pushAll([
-                  NavRouteInfo(path: '/home'),
-                  NavRouteInfo(path: '/profile', extra: {'userId': 123}),
-                ]);
-              },
-              child: const Text('Push Multiple Routes'),
-            ),
-          ],
-        ),
-      ),
-    );
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }
 
-final _routes = [
+final navRoutes = [
   NavRoute(path: '/home', builder: (context, state) => const HomeScreen()),
   NavRoute(
     path: '/settings',

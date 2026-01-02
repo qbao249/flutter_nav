@@ -74,6 +74,41 @@ class SettingsScreen extends StatelessWidget {
               },
               child: const Text('Replace All with Home → Profile'),
             ),
+            const SizedBox(height: 16),
+            const Divider(),
+            const Text(
+              'Deep Linking Demo:',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () {
+                // Test deep linking with scheme URL
+                NavService.instance.openUrl('myapp://profile/123?source=app');
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              child: const Text('Test Deep Link: Profile'),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () {
+                // Test deep linking with domain URL
+                NavService.instance.openUrl(
+                  'https://myapp.com/settings/notifications?enabled=true',
+                );
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              child: const Text('Test Deep Link: Settings'),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () {
+                // Test user profile deep link
+                NavService.instance.openUrl('myapp://user/456?tab=activity');
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              child: const Text('Test User Profile Link'),
+            ),
             const SizedBox(height: 24),
             Row(
               children: [

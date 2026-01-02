@@ -12,6 +12,10 @@ A powerful and comprehensive navigation service package for Flutter applications
 - **🚀 Declarative API**: Intuitive methods for all navigation scenarios
 - **🔍 Navigation Debugging**: Built-in logging and navigation history inspection
 - **⚡ Performance Optimized**: Efficient route management with minimal overhead
+- **🔗 Deep Linking System**: Complete infrastructure for handling custom URLs and app links
+- **🎯 Smart URL Routing**: Automatic path parameter extraction and query parameter support
+- **🛠 Flexible Link Handlers**: Create custom handlers for different URL patterns
+- **🌐 Universal Link Support**: Both custom schemes and domain-based deep links
 
 ## Getting Started
 
@@ -19,7 +23,7 @@ Add this package to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  advanced_nav_service: ^0.1.0
+  advanced_nav_service: ^0.3.0
 ```
 
 Then run:
@@ -174,6 +178,512 @@ NavService.instance.pushReplacementAll([
   NavRouteInfo(path: '/profile'),
   NavRouteInfo(path: '/edit'),
 ]);
+```
+
+## Deep Linking
+
+Advanced Nav Service provides a comprehensive deep linking system that allows you to handle custom URLs and app links seamlessly.
+
+### 1. Setup Deep Linking
+
+#### Define Link Handlers
+
+Create custom link handlers by extending `NavLinkHandler`:
+
+```dart
+import 'package:advanced_nav_service/nav_service.dart';
+
+class ProfileLinkHandler extends NavLinkHandler {
+  @override
+  List<String> get redirectPaths => [
+    '/profile',
+    '/profile/:id',
+    '/user/:userId',
+  ];
+
+  @override
+  void onRedirect(NavLinkResult result) {
+    // Handle the deep link navigation
+    NavService.instance.navigate('/profile', extra: {
+      ...result.pathParameters,  // e.g., {'id': '123'}
+      ...result.queryParameters, // e.g., {'tab': 'settings'}
+    });
+  }
+}
+
+class SettingsLinkHandler extends NavLinkHandler {
+  @override
+  List<String> get redirectPaths => [
+    '/settings',
+    '/settings/:tab',
+    '/preferences/:section',
+  ];
+
+  @override
+  void onRedirect(NavLinkResult result) {
+    final extra = <String, dynamic>{
+      ...result.pathParameters,
+      ...result.queryParameters,
+    };
+    
+    NavService.instance.navigate('/settings', extra: extra);
+  }
+}
+```
+
+#### Configure Deep Linking
+
+Add link prefixes and handlers to your `NavServiceConfig`:
+
+```dart
+void main() {
+  final navigatorKey = GlobalKey<NavigatorState>();
+  
+  NavService.instance.init(
+    NavServiceConfig(
+      navigatorKey: navigatorKey,
+      routes: routes,
+      enableLogger: true,
+      // Deep linking configuration
+      linkPrefixes: [
+        'myapp://',                    // Custom scheme
+        'https://myapp.com/',          // Universal links
+        'https://www.myapp.com/',      // Alternative domain
+      ],
+      linkHandlers: [
+        ProfileLinkHandler(),
+        SettingsLinkHandler(),
+      ],
+    ),
+  );
+  
+  runApp(MyApp(navigatorKey: navigatorKey));
+}
+```
+
+### 2. Handle Deep Links
+
+#### Opening URLs Programmatically
+
+```dart
+// Handle custom scheme URLs
+NavService.instance.openUrl('myapp://profile/123?tab=settings');
+
+// Handle universal links
+NavService.instance.openUrl('https://myapp.com/profile/456?source=share');
+
+// Handle settings deep links
+NavService.instance.openUrl('myapp://settings/notifications?enabled=true');
+```
+
+#### Path Parameter Extraction
+
+The system automatically extracts path parameters using `:paramName` syntax:
+
+```dart
+class ProductLinkHandler extends NavLinkHandler {
+  @override
+  List<String> get redirectPaths => [
+    '/product/:productId',
+    '/category/:categoryId/product/:productId',
+    '/shop/:storeId/product/:productId/review/:reviewId',
+  ];
+
+  @override
+  void onRedirect(NavLinkResult result) {
+    // URL: myapp://product/abc123?color=red&size=large
+    // result.pathParameters = {'productId': 'abc123'}
+    // result.queryParameters = {'color': 'red', 'size': 'large'}
+    
+    final productId = result.pathParameters['productId'];
+    final color = result.queryParameters['color'];
+    
+    NavService.instance.navigate('/product', extra: {
+      'productId': productId,
+      'color': color,
+      'size': result.queryParameters['size'],
+    });
+  }
+}
+```
+
+### 3. Deep Link Features
+
+#### URL Pattern Matching
+
+- **Static paths**: `/profile`, `/settings`
+- **Dynamic parameters**: `/user/:userId`, `/product/:id`
+- **Nested parameters**: `/category/:catId/product/:prodId`
+- **Query parameters**: Automatically parsed and available
+
+#### Link Prefixes
+
+Support for multiple URL schemes:
+
+- **Custom schemes**: `myapp://`, `yourapp://`
+- **Universal links**: `https://domain.com/`, `https://www.domain.com/`
+- **Mixed prefixes**: Combine schemes and domains as needed
+
+#### Error Handling
+
+- **Duplicate path detection**: Prevents conflicts between handlers
+- **Invalid URL handling**: Graceful handling of malformed URLs
+- **Missing handler**: Logs when no handler matches a URL
+
+#### NavLinkResult
+
+Contains complete information about the matched deep link:
+
+```dart
+class NavLinkResult {
+  final String matchedRoutePath;        // '/user/:userId'
+  final Map<String, String> pathParameters;    // {'userId': '123'}  
+  final Map<String, String> queryParameters;   // {'tab': 'profile'}
+}
+```
+
+## Integration Guides
+
+### GoRouter Integration
+
+Advanced Nav Service can work alongside GoRouter for hybrid navigation scenarios.
+
+#### Setup
+
+1. **Install dependencies**:
+
+```yaml
+dependencies:
+  advanced_nav_service: ^0.3.0
+  go_router: ^latest_version
+```
+
+2. **Configure both systems**:
+
+```dart
+import 'package:go_router/go_router.dart';
+import 'package:advanced_nav_service/nav_service.dart';
+
+final navigatorKey = GlobalKey<NavigatorState>();
+
+// Configure GoRouter
+final GoRouter goRouter = GoRouter(
+  navigatorKey: navigatorKey,
+  observers: [
+    NavService.instance.routeObserver,
+  ],
+  routes: [
+    GoRoute(
+      path: '/go-home',
+      builder: (context, state) => const GoHomeScreen(),
+    ),
+    GoRoute(
+      path: '/go-profile/:userId',
+      builder: (context, state) => GoProfileScreen(
+        userId: state.pathParameters['userId']!,
+      ),
+    ),
+  ],
+);
+
+void main() {
+  // Configure NavService with the same navigator key
+  NavService.instance.init(
+    NavServiceConfig(
+      navigatorKey: navigatorKey,
+      routes: [
+        NavRoute(
+          path: '/nav-home',
+          builder: (context, state) => const NavHomeScreen(),
+        ),
+        NavRoute(
+          path: '/nav-settings',
+          builder: (context, state) => NavSettingsScreen(state: state),
+        ),
+      ],
+      enableLogger: true,
+    ),
+  );
+  
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp.router(
+      routerConfig: goRouter,
+    );
+  }
+}
+```
+
+#### Usage with .removeAll()
+
+When switching from NavService navigation to GoRouter's context.go(), call `removeAll()` first to clear NavService's internal navigation stack:
+
+```dart
+class HybridNavigationScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Hybrid Navigation')),
+      body: Column(
+        children: [
+          // Use NavService for internal app navigation
+          ElevatedButton(
+            onPressed: () {
+              NavService.instance.push('/nav-settings', extra: {
+                'theme': 'dark',
+              });
+            },
+            child: Text('NavService Navigation'),
+          ),
+          
+          // Clear NavService stack before using GoRouter
+          ElevatedButton(
+            onPressed: () {
+              // IMPORTANT: Clear NavService stack first
+              NavService.instance.removeAll();
+              
+              // Then use GoRouter navigation
+              context.go('/go-profile/123');
+            },
+            child: Text('Switch to GoRouter'),
+          ),
+          
+          // Direct GoRouter navigation (no cleanup needed)
+          ElevatedButton(
+            onPressed: () => context.go('/go-home'),
+            child: Text('Direct GoRouter Navigation'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+```
+
+#### Best Practices
+
+- **Call `removeAll()` before `context.go()`**: This ensures NavService doesn't interfere with GoRouter's routing
+- **Use consistent navigator key**: Both systems should share the same `GlobalKey<NavigatorState>`
+- **Include NavService route observer**: Add `NavService.instance.routeObserver` to GoRouter's observers for complete navigation tracking
+- **Separate concerns by use case**:
+  - **Use GoRouter for**: Static routes, initial redirects, resetting all routes completely, resetting history
+  - **Use NavService for**: Dynamic routes like push notifications, duplicate stacks, unpredictable navigation flows
+- **Monitor navigation state**: Enable logging to debug navigation conflicts
+
+#### Integration Pattern
+
+```dart
+class NavigationHelper {
+  static void switchToGoRouter(BuildContext context, String goRoute) {
+    // Clear NavService navigation history
+    NavService.instance.removeAll();
+    
+    // Switch to GoRouter navigation
+    context.go(goRoute);
+  }
+  
+  static void switchToNavService(String navRoute, {Map<String, dynamic>? extra}) {
+    // NavService handles its own stack - no cleanup needed
+    NavService.instance.navigate(navRoute, extra: extra);
+  }
+}
+
+// Usage
+NavigationHelper.switchToGoRouter(context, '/go-profile/456');
+NavigationHelper.switchToNavService('/nav-settings', extra: {'theme': 'light'});
+```
+
+### app_links Integration
+
+Integrate with the `app_links` package to handle incoming deep links from the system.
+
+#### Setup
+
+1. **Install dependencies**:
+
+```yaml
+dependencies:
+  advanced_nav_service: ^0.3.0
+  app_links: ^latest_version
+```
+
+2. **Configure app_links** (follow their platform-specific setup for iOS/Android)
+
+3. **Setup deep link handling**:
+
+```dart
+import 'package:app_links/app_links.dart';
+import 'package:advanced_nav_service/nav_service.dart';
+
+class DeepLinkService {
+  static final AppLinks _appLinks = AppLinks();
+  
+  static Future<void> initializeDeepLinks() async {
+    // Handle the initial link when app is launched
+    final initialLink = await _appLinks.getInitialLink();
+    if (initialLink != null) {
+      _handleDeepLink(initialLink);
+    }
+    
+    // Handle incoming links when app is already running
+    _appLinks.uriLinkStream.listen(
+      (Uri uri) {
+        _handleDeepLink(uri);
+      },
+      onError: (err) {
+        debugPrint('Deep link error: $err');
+      },
+    );
+  }
+  
+  static void _handleDeepLink(Uri uri) {
+    // Convert URI to string and pass to NavService
+    final url = uri.toString();
+    debugPrint('Handling deep link: $url');
+    
+    // Use NavService's openUrl method
+    NavService.instance.openUrl(url);
+  }
+}
+```
+
+#### Usage
+
+1. **Initialize in main.dart**:
+
+```dart
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Configure NavService with deep linking
+  NavService.instance.init(
+    NavServiceConfig(
+      navigatorKey: navigatorKey,
+      routes: routes,
+      enableLogger: true,
+      linkPrefixes: [
+        'myapp://',
+        'https://myapp.com/',
+      ],
+      linkHandlers: [
+        ProfileLinkHandler(),
+        SettingsLinkHandler(),
+        ProductLinkHandler(),
+      ],
+    ),
+  );
+  
+  // Initialize deep link handling
+  await DeepLinkService.initializeDeepLinks();
+  
+  runApp(MyApp());
+}
+```
+
+2. **Handle app lifecycle states**:
+
+```dart
+class MyApp extends StatefulWidget {
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Handle deep links when app resumes
+    if (state == AppLifecycleState.resumed) {
+      // Re-check for any pending deep links
+      DeepLinkService.checkPendingLinks();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      navigatorKey: navigatorKey,
+      navigatorObservers: [NavService.instance.routeObserver],
+      home: LaunchScreen(),
+    );
+  }
+}
+```
+
+#### Advanced Setup
+
+```dart
+class AdvancedDeepLinkService {
+  static final AppLinks _appLinks = AppLinks();
+  
+  static Future<void> initializeWithDelay() async {
+    // Wait for NavService initialization
+    await Future.delayed(Duration(milliseconds: 500));
+    
+    final initialLink = await _appLinks.getInitialLink();
+    if (initialLink != null) {
+      // Handle with delay to ensure app is fully loaded
+      Future.delayed(Duration(seconds: 1), () {
+        NavService.instance.openUrl(initialLink.toString());
+      });
+    }
+    
+    _appLinks.uriLinkStream.listen((Uri uri) {
+      // Immediate handling for runtime links
+      NavService.instance.openUrl(uri.toString());
+    });
+  }
+  
+  // Method to programmatically test deep links
+  static void testDeepLink(String url) {
+    debugPrint('Testing deep link: $url');
+    NavService.instance.openUrl(url);
+  }
+}
+```
+
+#### Testing Deep Links
+
+```dart
+class DeepLinkTester extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Deep Link Tester')),
+      body: Column(
+        children: [
+          ElevatedButton(
+            onPressed: () {
+              AdvancedDeepLinkService.testDeepLink('myapp://profile/123?tab=settings');
+            },
+            child: Text('Test Profile Link'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              AdvancedDeepLinkService.testDeepLink('https://myapp.com/settings/notifications');
+            },
+            child: Text('Test Settings Link'),
+          ),
+        ],
+      ),
+    );
+  }
+}
 ```
 
 ## Working with Extra Data
