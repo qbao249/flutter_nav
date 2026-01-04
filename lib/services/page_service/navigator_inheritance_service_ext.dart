@@ -1,6 +1,6 @@
-part of 'nav_service.dart';
+part of 'page_service.dart';
 
-extension NavigatorInheritanceServiceExt on NavService {
+extension NavigatorInheritanceServiceExt on PageService {
   /// Push a new route onto the navigator stack with animation
   ///
   /// Returns a Future that completes to the result value passed to

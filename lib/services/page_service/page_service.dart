@@ -1,89 +1,59 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'nav_link_handler.dart';
-import 'nav_link_result.dart';
-import 'nav_extra.dart';
-import 'nav_route.dart';
-import 'nav_route_info.dart';
-import 'nav_state.dart';
-import 'nav_step.dart';
+
+import '../../common/common.dart';
+import '../../common/page_route_observer_instance.dart';
 
 part 'navigator_inheritance_service_ext.dart';
-part 'linking_service_ext.dart';
 
-class NavServiceConfig {
-  const NavServiceConfig({
-    required this.routes,
-    required this.navigatorKey,
-    this.enableLogger = true,
-    this.linkPrefixes,
-    this.linkHandlers,
-  });
-
-  /// List of navigation routes
-  final List<NavRoute> routes;
-
-  /// Navigator key to access navigator state
-  final GlobalKey<NavigatorState> navigatorKey;
-
-  /// Enable logging for navigation actions
-  final bool enableLogger;
-
-  /// List of link prefixes to match incoming URLs against.
-  final List<String>? linkPrefixes;
-
-  /// List of link handlers to process specific link patterns.
-  final List<NavLinkHandler>? linkHandlers;
-}
-
-class NavService {
+class PageService {
   // Factory returns the single instance
-  factory NavService() => instance;
+  factory PageService() => instance;
 
   // Private constructor
-  NavService._internal();
+  PageService._internal();
   // Singleton instance
-  static final NavService instance = NavService._internal();
+  static final PageService instance = PageService._internal();
 
-  // Commonly used navigator key (you can remove or extend as needed)
+  static PageService get page => instance;
+
   GlobalKey<NavigatorState>? _navigatorKey;
 
   final List<NavStep> _steps = [];
 
   final Map<String, NavRoute> _routes = {};
 
-  final List<String> _linkPrefixes = [];
-
-  final List<NavLinkHandler> _linkHandlers = [];
-
   BuildContext? get _currentContext => _navigatorKey?.currentContext;
 
   /// Route observer to monitor navigation events
-  NavigatorObserver get routeObserver => _RouteObserver();
+  /// Use a single instance so `RouteAware` subscriptions register
+  /// against the same observer that is attached to the Navigator.
+  final RouteObserver<PageRoute> _routeObserver = _RouteObserver();
+
+  RouteObserver<PageRoute> get routeObserver => _routeObserver;
+
+  void Function()? _pageRouteObserverUnsubscribe;
 
   bool _enableLogger = true;
 
   /// Initialize the NavService with configuration
   ///
   /// Clean up previous configuration if exists
-  void init(NavServiceConfig config) {
-    _routes
-      ..clear()
-      ..addAll({for (final route in config.routes) route.path: route});
-
+  void init(NavPageServiceConfig config) {
     _navigatorKey = config.navigatorKey;
 
     _enableLogger = config.enableLogger;
 
-    if (config.linkPrefixes != null) {
-      _linkPrefixes.clear();
-      _linkPrefixes.addAll(config.linkPrefixes!);
-    }
+    // Listen to pageRouteObserverInstance
+    _pageRouteObserverUnsubscribe?.call();
+    _pageRouteObserverUnsubscribe = pageRouteObserverInstance.addListener(
+      _routeObserver,
+    );
 
-    if (config.linkHandlers != null) {
-      _initLinkHandlers(config.linkHandlers!);
-    }
+    _routes
+      ..clear()
+      ..addAll({for (final route in config.routes) route.path: route});
   }
 
   /// context.go():
@@ -607,29 +577,29 @@ class NavService {
   List<NavStep> get navigationHistory => List.unmodifiable(_steps);
 }
 
-class _RouteObserver extends NavigatorObserver {
+class _RouteObserver extends RouteObserver<PageRoute> {
   @override
   void didPush(Route route, Route? previousRoute) {
     super.didPush(route, previousRoute);
-    NavService.instance._didPush(route, previousRoute);
+    PageService.instance._didPush(route, previousRoute);
   }
 
   @override
   void didPop(Route route, Route? previousRoute) {
     super.didPop(route, previousRoute);
-    NavService.instance._didPop(route, previousRoute);
+    PageService.instance._didPop(route, previousRoute);
   }
 
   @override
   void didReplace({Route? newRoute, Route? oldRoute}) {
     super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
-    NavService.instance._didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    PageService.instance._didReplace(newRoute: newRoute, oldRoute: oldRoute);
   }
 
   @override
   void didRemove(Route route, Route? previousRoute) {
     super.didRemove(route, previousRoute);
-    NavService.instance._didRemove(
+    PageService.instance._didRemove(
       oldRoute: route,
       previousRoute: previousRoute,
     );

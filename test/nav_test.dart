@@ -1,20 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:advanced_nav_service/nav_service.dart';
+import 'package:flutter_nav/flutter_nav.dart';
 
 void main() {
-  group('NavService', () {
-    late NavService navService;
+  group('PageService', () {
     late GlobalKey<NavigatorState> navigatorKey;
 
     setUp(() {
-      navService = NavService.instance;
       navigatorKey = GlobalKey<NavigatorState>();
     });
 
     test('should be a singleton', () {
-      final instance1 = NavService();
-      final instance2 = NavService.instance;
+      final instance1 = Nav.page;
+      final instance2 = Nav.page;
       expect(instance1, same(instance2));
     });
 
@@ -24,23 +22,35 @@ void main() {
         NavRoute(path: '/settings', builder: (context, state) => Container()),
       ];
 
-      final config = NavServiceConfig(
+      final config = NavConfig(
         routes: routes,
         navigatorKey: navigatorKey,
         enableLogger: false,
       );
 
-      navService.init(config);
+      Nav.init(config);
 
-      expect(navService.routeObserver, isA<NavigatorObserver>());
-      expect(navService.navigationHistory, isEmpty);
+      // Test navigation history
+      expect(Nav.page.navigationHistory, isEmpty);
     });
 
     testWidgets('should navigate between routes', (WidgetTester tester) async {
       final routes = [
         NavRoute(
           path: '/home',
-          builder: (context, state) => const Scaffold(body: Text('Home')),
+          builder:
+              (context, state) => Scaffold(
+                appBar: AppBar(title: const Text('Home Page')),
+                body: Column(
+                  children: [
+                    const Text('Home Content'),
+                    ElevatedButton(
+                      onPressed: () => Nav.page.push('/settings'),
+                      child: const Text('Go to Settings'),
+                    ),
+                  ],
+                ),
+              ),
         ),
         NavRoute(
           path: '/settings',
@@ -48,8 +58,8 @@ void main() {
         ),
       ];
 
-      navService.init(
-        NavServiceConfig(
+      Nav.init(
+        NavConfig(
           routes: routes,
           navigatorKey: navigatorKey,
           enableLogger: false,
@@ -59,18 +69,18 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           navigatorKey: navigatorKey,
-          navigatorObservers: [navService.routeObserver],
+          navigatorObservers: Nav.observers,
           home: Builder(
             builder:
                 (context) => Scaffold(
                   body: Column(
                     children: [
                       ElevatedButton(
-                        onPressed: () => navService.push('/home'),
+                        onPressed: () => Nav.page.push('/home'),
                         child: const Text('Go Home'),
                       ),
                       ElevatedButton(
-                        onPressed: () => navService.push('/settings'),
+                        onPressed: () => Nav.page.push('/settings'),
                         child: const Text('Go Settings'),
                       ),
                     ],
@@ -83,17 +93,17 @@ void main() {
       // Test navigation to home
       await tester.tap(find.text('Go Home'));
       await tester.pumpAndSettle();
-      expect(find.text('Home'), findsOneWidget);
+      expect(find.text('Home Content'), findsOneWidget);
 
-      // Test navigation to settings
-      await tester.tap(find.text('Go Settings'));
+      // Navigate to settings from home page
+      await tester.tap(find.text('Go to Settings'));
       await tester.pumpAndSettle();
       expect(find.text('Settings'), findsOneWidget);
 
       // Verify navigation history
-      expect(navService.navigationHistory.length, equals(2));
+      expect(Nav.page.navigationHistory.length, equals(2));
       expect(
-        navService.navigationHistory.last.currentState.path,
+        Nav.page.navigationHistory.last.currentState.path,
         equals('/settings'),
       );
     });
@@ -111,8 +121,8 @@ void main() {
         ),
       ];
 
-      navService.init(
-        NavServiceConfig(
+      Nav.init(
+        NavConfig(
           routes: routes,
           navigatorKey: navigatorKey,
           enableLogger: false,
@@ -122,13 +132,13 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           navigatorKey: navigatorKey,
-          navigatorObservers: [navService.routeObserver],
+          navigatorObservers: Nav.observers,
           home: Builder(
             builder:
                 (context) => Scaffold(
                   body: ElevatedButton(
                     onPressed:
-                        () => navService.push(
+                        () => Nav.page.push(
                           '/test',
                           extra: {'message': 'Hello World'},
                         ),
@@ -150,16 +160,40 @@ void main() {
       final routes = [
         NavRoute(
           path: '/first',
-          builder: (context, state) => const Scaffold(body: Text('First')),
+          builder:
+              (context, state) => Scaffold(
+                appBar: AppBar(title: const Text('First Page')),
+                body: Column(
+                  children: [
+                    const Text('First Content'),
+                    ElevatedButton(
+                      onPressed: () => Nav.page.push('/second'),
+                      child: const Text('Push Second'),
+                    ),
+                  ],
+                ),
+              ),
         ),
         NavRoute(
           path: '/second',
-          builder: (context, state) => const Scaffold(body: Text('Second')),
+          builder:
+              (context, state) => Scaffold(
+                appBar: AppBar(title: const Text('Second Page')),
+                body: Column(
+                  children: [
+                    const Text('Second Content'),
+                    ElevatedButton(
+                      onPressed: () => Nav.page.pop(),
+                      child: const Text('Pop'),
+                    ),
+                  ],
+                ),
+              ),
         ),
       ];
 
-      navService.init(
-        NavServiceConfig(
+      Nav.init(
+        NavConfig(
           routes: routes,
           navigatorKey: navigatorKey,
           enableLogger: false,
@@ -169,23 +203,15 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           navigatorKey: navigatorKey,
-          navigatorObservers: [navService.routeObserver],
+          navigatorObservers: Nav.observers,
           home: Builder(
             builder:
                 (context) => Scaffold(
                   body: Column(
                     children: [
                       ElevatedButton(
-                        onPressed: () => navService.push('/first'),
+                        onPressed: () => Nav.page.push('/first'),
                         child: const Text('Push First'),
-                      ),
-                      ElevatedButton(
-                        onPressed: () => navService.push('/second'),
-                        child: const Text('Push Second'),
-                      ),
-                      ElevatedButton(
-                        onPressed: () => navService.pop(),
-                        child: const Text('Pop'),
                       ),
                     ],
                   ),
@@ -197,20 +223,22 @@ void main() {
       // Push first route
       await tester.tap(find.text('Push First'));
       await tester.pumpAndSettle();
-      expect(navService.navigationHistory.length, equals(1));
+      expect(Nav.page.navigationHistory.length, equals(1));
+      expect(find.text('First Content'), findsOneWidget);
 
-      // Push second route
+      // Push second route from first route
       await tester.tap(find.text('Push Second'));
       await tester.pumpAndSettle();
-      expect(navService.navigationHistory.length, equals(2));
+      expect(Nav.page.navigationHistory.length, equals(2));
+      expect(find.text('Second Content'), findsOneWidget);
 
-      // Pop
-      expect(navService.canPop(), isTrue);
+      // Pop from second route
+      expect(Nav.page.canPop(), isTrue);
       await tester.tap(find.text('Pop'));
       await tester.pumpAndSettle();
 
-      expect(find.text('First'), findsOneWidget);
-      expect(navService.navigationHistory.length, equals(1));
+      expect(find.text('First Content'), findsOneWidget);
+      expect(Nav.page.navigationHistory.length, equals(1));
     });
 
     testWidgets('should handle replace operations', (
@@ -219,7 +247,19 @@ void main() {
       final routes = [
         NavRoute(
           path: '/original',
-          builder: (context, state) => const Scaffold(body: Text('Original')),
+          builder:
+              (context, state) => Scaffold(
+                appBar: AppBar(title: const Text('Original Page')),
+                body: Column(
+                  children: [
+                    const Text('Original Content'),
+                    ElevatedButton(
+                      onPressed: () => Nav.page.pushReplacement('/replacement'),
+                      child: const Text('Replace'),
+                    ),
+                  ],
+                ),
+              ),
         ),
         NavRoute(
           path: '/replacement',
@@ -228,8 +268,8 @@ void main() {
         ),
       ];
 
-      navService.init(
-        NavServiceConfig(
+      Nav.init(
+        NavConfig(
           routes: routes,
           navigatorKey: navigatorKey,
           enableLogger: false,
@@ -239,20 +279,15 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           navigatorKey: navigatorKey,
-          navigatorObservers: [navService.routeObserver],
+          navigatorObservers: Nav.observers,
           home: Builder(
             builder:
                 (context) => Scaffold(
                   body: Column(
                     children: [
                       ElevatedButton(
-                        onPressed: () => navService.push('/original'),
+                        onPressed: () => Nav.page.push('/original'),
                         child: const Text('Push Original'),
-                      ),
-                      ElevatedButton(
-                        onPressed:
-                            () => navService.pushReplacement('/replacement'),
-                        child: const Text('Replace'),
                       ),
                     ],
                   ),
@@ -264,13 +299,63 @@ void main() {
       // Push original route
       await tester.tap(find.text('Push Original'));
       await tester.pumpAndSettle();
-      expect(find.text('Original'), findsOneWidget);
+      expect(find.text('Original Content'), findsOneWidget);
 
       // Replace with new route
       await tester.tap(find.text('Replace'));
       await tester.pumpAndSettle();
       expect(find.text('Replacement'), findsOneWidget);
-      expect(find.text('Original'), findsNothing);
+      expect(find.text('Original Content'), findsNothing);
+    });
+  });
+
+  group('NavAware', () {
+    testWidgets('calls lifecycle callbacks', (WidgetTester tester) async {
+      final navigatorKey = GlobalKey<NavigatorState>();
+
+      var initCalled = false;
+      var afterCalled = false;
+      var disposeCalled = false;
+
+      final routes = [
+        NavRoute(
+          path: '/other',
+          builder: (context, state) => const Scaffold(body: Text('Other')),
+        ),
+      ];
+
+      Nav.init(
+        NavConfig(
+          routes: routes,
+          navigatorKey: navigatorKey,
+          enableLogger: false,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorKey: navigatorKey,
+          navigatorObservers: Nav.observers,
+          home: PageAware(
+            onInit: () => initCalled = true,
+            onAfterFirstFrame: () => afterCalled = true,
+            onDispose: () => disposeCalled = true,
+            child: const Scaffold(body: Text('Home')),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(initCalled, isTrue);
+      expect(afterCalled, isTrue);
+      expect(disposeCalled, isFalse);
+
+      // Replace the current route to trigger dispose on the Home route.
+      Nav.page.replace('/other');
+      await tester.pumpAndSettle();
+
+      expect(disposeCalled, isTrue);
     });
   });
 
@@ -331,12 +416,10 @@ void main() {
 
   group('Deep Linking', () {
     late TestNavLinkHandler testHandler;
-    late NavService navService;
     late GlobalKey<NavigatorState> navigatorKey;
 
     setUp(() {
       testHandler = TestNavLinkHandler();
-      navService = NavService.instance;
       navigatorKey = GlobalKey<NavigatorState>();
     });
 
@@ -345,7 +428,7 @@ void main() {
         NavRoute(path: '/home', builder: (context, state) => Container()),
       ];
 
-      final config = NavServiceConfig(
+      final config = NavConfig(
         routes: routes,
         navigatorKey: navigatorKey,
         enableLogger: false,
@@ -353,16 +436,18 @@ void main() {
         linkHandlers: [testHandler],
       );
 
-      expect(() => navService.init(config), returnsNormally);
+      expect(() => Nav.init(config), returnsNormally);
     });
 
-    test('should handle URL with scheme prefix', () {
+    testWidgets('should handle URL with scheme prefix', (
+      WidgetTester tester,
+    ) async {
       final routes = [
         NavRoute(path: '/home', builder: (context, state) => Container()),
       ];
 
-      navService.init(
-        NavServiceConfig(
+      Nav.init(
+        NavConfig(
           routes: routes,
           navigatorKey: navigatorKey,
           enableLogger: false,
@@ -371,7 +456,12 @@ void main() {
         ),
       );
 
-      navService.openUrl('myapp://product/123?category=electronics');
+      // Create widget tree so navigator context is available
+      await tester.pumpWidget(
+        MaterialApp(navigatorKey: navigatorKey, home: Container()),
+      );
+
+      Nav.link.openUrl('myapp://product/123?category=electronics');
 
       expect(testHandler.lastResult?.matchedRoutePath, equals('/product/:id'));
       expect(testHandler.lastResult?.pathParameters, equals({'id': '123'}));
@@ -381,13 +471,15 @@ void main() {
       );
     });
 
-    test('should handle URL with domain prefix', () {
+    testWidgets('should handle URL with domain prefix', (
+      WidgetTester tester,
+    ) async {
       final routes = [
         NavRoute(path: '/home', builder: (context, state) => Container()),
       ];
 
-      navService.init(
-        NavServiceConfig(
+      Nav.init(
+        NavConfig(
           routes: routes,
           navigatorKey: navigatorKey,
           enableLogger: false,
@@ -396,7 +488,12 @@ void main() {
         ),
       );
 
-      navService.openUrl('https://myapp.com/user/profile?tab=settings');
+      // Create widget tree so navigator context is available
+      await tester.pumpWidget(
+        MaterialApp(navigatorKey: navigatorKey, home: Container()),
+      );
+
+      Nav.link.openUrl('https://myapp.com/user/profile?tab=settings');
 
       expect(testHandler.lastResult?.matchedRoutePath, equals('/user/profile'));
       expect(testHandler.lastResult?.pathParameters, isEmpty);
@@ -406,13 +503,15 @@ void main() {
       );
     });
 
-    test('should extract path parameters correctly', () {
+    testWidgets('should extract path parameters correctly', (
+      WidgetTester tester,
+    ) async {
       final routes = [
         NavRoute(path: '/home', builder: (context, state) => Container()),
       ];
 
-      navService.init(
-        NavServiceConfig(
+      Nav.init(
+        NavConfig(
           routes: routes,
           navigatorKey: navigatorKey,
           enableLogger: false,
@@ -421,7 +520,12 @@ void main() {
         ),
       );
 
-      navService.openUrl('myapp://product/abc123/review/456');
+      // Create widget tree so navigator context is available
+      await tester.pumpWidget(
+        MaterialApp(navigatorKey: navigatorKey, home: Container()),
+      );
+
+      Nav.link.openUrl('myapp://product/abc123/review/456');
 
       expect(
         testHandler.lastResult?.matchedRoutePath,
@@ -441,8 +545,8 @@ void main() {
       final duplicateHandler = TestNavLinkHandler();
 
       expect(
-        () => navService.init(
-          NavServiceConfig(
+        () => Nav.init(
+          NavConfig(
             routes: routes,
             navigatorKey: navigatorKey,
             enableLogger: false,
@@ -454,13 +558,15 @@ void main() {
       );
     });
 
-    test('should not handle URL without matching prefix', () {
+    testWidgets('should not handle URL without matching prefix', (
+      WidgetTester tester,
+    ) async {
       final routes = [
         NavRoute(path: '/home', builder: (context, state) => Container()),
       ];
 
-      navService.init(
-        NavServiceConfig(
+      Nav.init(
+        NavConfig(
           routes: routes,
           navigatorKey: navigatorKey,
           enableLogger: false,
@@ -469,8 +575,13 @@ void main() {
         ),
       );
 
+      // Create widget tree so navigator context is available
+      await tester.pumpWidget(
+        MaterialApp(navigatorKey: navigatorKey, home: Container()),
+      );
+
       testHandler.clearResults();
-      navService.openUrl('https://other.com/product/123');
+      Nav.link.openUrl('https://other.com/product/123');
 
       expect(testHandler.lastResult, isNull);
     });
@@ -501,7 +612,7 @@ class TestNavLinkHandler extends NavLinkHandler {
   ];
 
   @override
-  void onRedirect(NavLinkResult result) {
+  void onRedirect(BuildContext context, NavLinkResult result) {
     lastResult = result;
   }
 

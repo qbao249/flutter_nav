@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:advanced_nav_service/nav_service.dart';
+import 'package:flutter_nav/flutter_nav.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key, required this.state});
@@ -60,7 +60,7 @@ class ProfileScreen extends StatelessWidget {
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: () {
-                NavService.instance.push(
+                Nav.page.push(
                   '/settings',
                   extra: {'fromProfile': true, 'userId': userId},
                 );
@@ -70,17 +70,14 @@ class ProfileScreen extends StatelessWidget {
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: () {
-                NavService.instance.navigate(
-                  '/home',
-                  extra: {'returnFrom': 'profile'},
-                );
+                Nav.page.navigate('/home', extra: {'returnFrom': 'profile'});
               },
               child: const Text('Navigate to Home (Smart)'),
             ),
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: () {
-                NavService.instance.replace(
+                Nav.page.replace(
                   '/settings',
                   extra: {'replacedFrom': 'profile'},
                 );
@@ -93,8 +90,8 @@ class ProfileScreen extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton(
                     onPressed:
-                        NavService.instance.canPop()
-                            ? () => NavService.instance.pop({
+                        Nav.page.canPop()
+                            ? () => Nav.page.pop({
                               'profileData': {
                                 'userId': userId,
                                 'visited': DateTime.now().toString(),
@@ -141,7 +138,7 @@ class ProfileScreen extends StatelessWidget {
   }
 
   void _showNavigationHistory(BuildContext context) {
-    final history = NavService.instance.navigationHistory;
+    final history = Nav.page.navigationHistory;
     showDialog(
       context: context,
       builder:
@@ -153,7 +150,7 @@ class ProfileScreen extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Current: ${NavService.instance.joinedLocation}'),
+                  Text('Current: ${Nav.page.joinedLocation}'),
                   const SizedBox(height: 12),
                   const Text(
                     'Navigation Stack:',

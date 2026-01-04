@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:advanced_nav_service/nav_service.dart';
+import 'package:flutter_nav/flutter_nav.dart';
 
 class SettingsLinkHandler extends NavLinkHandler {
   @override
@@ -10,7 +10,7 @@ class SettingsLinkHandler extends NavLinkHandler {
   ];
 
   @override
-  void onRedirect(NavLinkResult result) {
+  void onRedirect(BuildContext context, NavLinkResult result) {
     debugPrint(
       'Redirected to Settings with result: matchedPath=${result.matchedRoutePath}, '
       'pathParameters=${result.pathParameters}, '
@@ -30,6 +30,6 @@ class SettingsLinkHandler extends NavLinkHandler {
       extra['section'] = result.pathParameters['section'];
     }
 
-    NavService.instance.navigate('/settings', extra: extra);
+    Nav.page.navigate('/settings', extra: extra);
   }
 }

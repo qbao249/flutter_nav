@@ -1,6 +1,6 @@
-# Advanced Nav Service
+# Flutter Nav
 
-A powerful navigation service package for Flutter applications that provides advanced routing, navigation state management, and declarative navigation utilities.
+A comprehensive navigation package for Flutter applications providing routing, navigation state management, deep linking, and navigation utilities with a clean, intuitive API.
 
 ## Table of Contents
 
@@ -13,6 +13,7 @@ A powerful navigation service package for Flutter applications that provides adv
 7. [Working with Extra Data](#7-working-with-extra-data)
 8. [Navigation History & Debugging](#8-navigation-history--debugging)
 9. [API Reference](#9-api-reference)
+10. [Ultilities](#10-ultilities)
 
 ## 1. Installation
 
@@ -20,7 +21,7 @@ Add this package to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  advanced_nav_service: ^0.3.2
+  flutter_nav: ^0.4.0
 ```
 
 Then run:
@@ -31,22 +32,22 @@ flutter pub get
 
 ## 2. Features
 
-- **🎯 Singleton Navigation Service**: Access navigation functionality from anywhere in your app
+- **🎯 Centralized Navigation**: Access page and link services from anywhere with `Nav.page` and `Nav.link`
 - **📊 Navigation History Tracking**: Keep track of navigation stack and history
 - **💾 Extra Data Support**: Pass and receive data between routes with type safety
 - **🔄 Advanced Route Management**: Smart navigation, replace operations, and stack manipulation
-- **📝 Route Observers**: Monitor navigation events with built-in observer
+- **📝 Route Observers**: Monitor navigation events with built-in observer via `Nav.observers`
 - **🚀 Declarative API**: Intuitive methods for all navigation scenarios
 - **🔍 Navigation Debugging**: Built-in logging and navigation history inspection
 - **⚡ Performance Optimized**: Efficient route management with minimal overhead
-- **🔗 Deep Linking Handling**: Complete infrastructure for handling custom URLs with app_links integration, path parameters extraction, and flexible link handlers
-
+- **🔗 Deep Linking Handling**: Complete infrastructure for handling custom URLs with path parameters extraction and flexible link handlers
+- **🧰 Utilities**: Navigation utilities to make routing easier and more efficient 
 ## 3. Standalone Setup
 
 ### 1. Define Your Routes
 
 ```dart
-import 'package:advanced_nav_service/nav_service.dart';
+import 'package:flutter_nav/flutter_nav.dart';
 
 final routes = [
   NavRoute(
@@ -70,8 +71,8 @@ final routes = [
 void main() {
   final navigatorKey = GlobalKey<NavigatorState>();
   
-  NavService.instance.init(
-    NavServiceConfig(
+  Nav.init(
+    NavConfig(
       routes: routes,
       navigatorKey: navigatorKey,
       enableLogger: true,
@@ -94,7 +95,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: navigatorKey,
-      navigatorObservers: [NavService.instance.routeObserver],
+      navigatorObservers: Nav.observers,
       home: const LaunchScreen(),
     );
   }
@@ -107,7 +108,7 @@ Use a dedicated LaunchScreen that runs initial checks in initState (authenticati
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:advanced_nav_service/nav_service.dart';
+import 'package:flutter_nav/flutter_nav.dart';
 
 class LaunchScreen extends StatefulWidget {
   const LaunchScreen({super.key});
@@ -135,14 +136,14 @@ class _LaunchScreenState extends State<LaunchScreen> {
 
     // Decide target route
     if (initialDeepLink != null) {
-      // Convert deep link to a route or call NavService.openUrl
-      NavService.instance.openUrl(initialDeepLink.toString());
+      // Convert deep link to a route or call Nav.link.openUrl
+      Nav.link.openUrl(initialDeepLink.toString());
       return;
     }
 
     if (!isAuthenticated) {
       // Redirect to login or onboarding
-      NavService.instance.replaceAll([
+      Nav.page.replaceAll([
         NavRouteInfo(path: '/login', extra: {}), 
         // ...
       ]);
@@ -150,7 +151,7 @@ class _LaunchScreenState extends State<LaunchScreen> {
     }
 
     // Default: go to home
-    NavService.instance.pushReplacement('/home');
+    Nav.page.pushReplacement('/home');
   }
 
   // Dummy implementations - replace with real logic
@@ -183,27 +184,27 @@ class _LaunchScreenState extends State<LaunchScreen> {
 
 ```dart
 // Push a new route
-NavService.instance.push('/profile');
+Nav.page.push('/profile');
 
 // Push with extra data
-NavService.instance.push('/profile', extra: {
+Nav.page.push('/profile', extra: {
   'userId': 123,
   'name': 'John Doe',
 });
 
 // Pop current route
-NavService.instance.pop();
+Nav.page.pop();
 
 // Pop with result data
-NavService.instance.pop({'result': 'success'});
+Nav.page.pop({'result': 'success'});
 
 // Check if can pop
-if (NavService.instance.canPop()) {
-  NavService.instance.pop();
+if (Nav.page.canPop()) {
+  Nav.page.pop();
 }
 
 // Try to pop if possible and get whether pop occurred
-if (NavService.instance.maybePop()) {
+if (Nav.page.maybePop()) {
   // pop was performed
 } else {
   // nothing to pop
@@ -214,60 +215,60 @@ if (NavService.instance.maybePop()) {
 
 ```dart
 // Navigate intelligently - if route exists in stack, pop to it; otherwise push
-NavService.instance.navigate('/home');
+Nav.page.navigate('/home');
 
 // Force push even if route exists in history
-NavService.instance.navigate('/home', forcePush: true);
+Nav.page.navigate('/home', forcePush: true);
 ```
 
 ### Replace Operations
 
 ```dart
 // Replace current route with push animation
-NavService.instance.pushReplacement('/settings');
+Nav.page.pushReplacement('/settings');
 
 // Replace current route without animation
-NavService.instance.replace('/settings');
+Nav.page.replace('/settings');
 ```
 
 ### Stack Management
 
 ```dart
 // Push and remove all previous routes
-NavService.instance.pushAndRemoveUntil('/home', (route) => false);
+Nav.page.pushAndRemoveUntil('/home', (route) => false);
 
 // Pop until specific condition
-NavService.instance.popUntil((route) => route.settings.name == '/home');
+Nav.page.popUntil((route) => route.settings.name == '/home');
 
 // Pop until specific path
-NavService.instance.popUntilPath('/home');
+Nav.page.popUntilPath('/home');
 
 // Pop all routes
-NavService.instance.popAll();
+Nav.page.popAll();
 
 // Remove all routes without animation
 // Caution: just use this method when switch to gorouter
-NavService.instance.removeAll();
+Nav.page.removeAll();
 ```
 
 ### Bulk Operations
 
 ```dart
 // Push multiple routes at once
-NavService.instance.pushAll([
+Nav.page.pushAll([
   NavRouteInfo(path: '/home'),
   NavRouteInfo(path: '/profile', extra: {'userId': 123}),
   NavRouteInfo(path: '/settings'),
 ]);
 
 // Replace all routes with new stack
-NavService.instance.replaceAll([
+Nav.page.replaceAll([
   NavRouteInfo(path: '/home'),
   NavRouteInfo(path: '/dashboard'),
 ]);
 
 // Replace last route with multiple routes
-NavService.instance.pushReplacementAll([
+Nav.page.pushReplacementAll([
   NavRouteInfo(path: '/profile'),
   NavRouteInfo(path: '/edit'),
 ]);
@@ -280,7 +281,7 @@ NavService.instance.pushReplacementAll([
 Create custom link handlers by extending `NavLinkHandler`:
 
 ```dart
-import 'package:advanced_nav_service/nav_service.dart';
+import 'package:flutter_nav/flutter_nav.dart';
 
 class ProfileLinkHandler extends NavLinkHandler {
   @override
@@ -291,9 +292,9 @@ class ProfileLinkHandler extends NavLinkHandler {
   ];
 
   @override
-  void onRedirect(NavLinkResult result) {
+  void onRedirect(BuildContext context, NavLinkResult result) {
     // Handle the deep link navigation
-    NavService.instance.navigate('/profile', extra: {
+    Nav.page.navigate('/profile', extra: {
       ...result.pathParameters,  // e.g., {'id': '123'}
       ...result.queryParameters, // e.g., {'tab': 'settings'}
     });
@@ -308,8 +309,8 @@ class SettingsLinkHandler extends NavLinkHandler {
   ];
 
   @override
-  void onRedirect(NavLinkResult result) {
-    NavService.instance.navigate('/settings', extra: {
+  void onRedirect(BuildContext context, NavLinkResult result) {
+    Nav.page.navigate('/settings', extra: {
       ...result.pathParameters,
       ...result.queryParameters,
     });
@@ -323,7 +324,7 @@ class SettingsLinkHandler extends NavLinkHandler {
 
 ```yaml
 dependencies:
-  advanced_nav_service: ^0.3.0
+  flutter_nav: ^0.4.0
   app_links: ^latest_version
 ```
 
@@ -335,8 +336,8 @@ void main() async {
 
   final navigatorKey = GlobalKey<NavigatorState>();
 
-  NavService.instance.init(
-    NavServiceConfig(
+  Nav.init(
+    NavConfig(
       navigatorKey: navigatorKey,
       routes: routes,
       enableLogger: true,
@@ -357,7 +358,7 @@ void main() async {
   runApp(MyApp(navigatorKey: navigatorKey));
 
   // Initialize app_links integration after the first frame.
-  // This ensures `NavService.instance.openUrl(...)` runs only when the
+  // This ensures `Nav.link.openUrl(...)` runs only when the
   // navigator and route observers are ready.
   WidgetsBinding.instance.addPostFrameCallback((_) {
     _initializeAppLinks();
@@ -371,12 +372,12 @@ Future<void> _initializeAppLinks() async {
   final initialLink = await appLinks.getInitialLink();
   if (initialLink != null) {
     // Safe to open URL now that the app has been started
-    NavService.instance.openUrl(initialLink.toString());
+    Nav.link.openUrl(initialLink.toString());
   }
 
   // Handle incoming links when app is running
   appLinks.uriLinkStream.listen((Uri uri) {
-    NavService.instance.openUrl(uri.toString());
+    Nav.link.openUrl(uri.toString());
   });
 }
 
@@ -392,8 +393,8 @@ See [LaunchScreen](#4-launchscreen-handle-initial-logic) for more details.
 
 ```dart
 // Open URLs programmatically
-NavService.instance.openUrl('myapp://profile/123?tab=settings');
-NavService.instance.openUrl('https://myapp.com/profile/456?source=share');
+Nav.link.openUrl('myapp://profile/123?tab=settings');
+Nav.link.openUrl('https://myapp.com/profile/456?source=share');
 ```
 
 ### URL Pattern Features
@@ -412,7 +413,7 @@ NavService.instance.openUrl('https://myapp.com/profile/456?source=share');
 
 ```yaml
 dependencies:
-  advanced_nav_service: ^0.3.0
+  flutter_nav: ^0.4.0
   go_router: ^latest_version
 ```
 
@@ -420,14 +421,14 @@ dependencies:
 
 ```dart
 import 'package:go_router/go_router.dart';
-import 'package:advanced_nav_service/nav_service.dart';
+import 'package:flutter_nav/flutter_nav.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
 // Configure GoRouter
 final GoRouter goRouter = GoRouter(
   navigatorKey: navigatorKey,
-  observers: [NavService.instance.routeObserver],
+  observers: Nav.observers,
   routes: [
     // ... go router routes
   ],
@@ -435,8 +436,8 @@ final GoRouter goRouter = GoRouter(
 
 void main() {
   // Configure NavService with the same navigator key
-  NavService.instance.init(
-    NavServiceConfig(
+  Nav.init(
+    NavConfig(
       routes: navServiceRoutes,
       navigatorKey: navigatorKey,
       enableLogger: true,
@@ -464,7 +465,7 @@ When switching from NavService to GoRouter navigation, call `removeAll()` first:
 ElevatedButton(
   onPressed: () {
     // Clear NavService stack before using GoRouter
-    NavService.instance.removeAll();
+    Nav.page.removeAll();
     // Then use GoRouter navigation
     context.go('/go-profile/123');
   },
@@ -486,7 +487,7 @@ ElevatedButton(
 ### Passing Data
 
 ```dart
-NavService.instance.push('/profile', extra: {
+Nav.page.push('/profile', extra: {
   'userId': 123,
   'name': 'John Doe',
   'email': 'john@example.com',
@@ -532,10 +533,10 @@ class ProfileScreen extends StatelessWidget {
 
 ```dart
 // Get current navigation stack
-List<NavStep> history = NavService.instance.navigationHistory;
+List<NavStep> history = Nav.page.navigationHistory;
 
 // Get current location path
-String currentLocation = NavService.instance.joinedLocation;
+String currentLocation = Nav.page.joinedLocation;
 
 // Print navigation history
 for (int i = 0; i < history.length; i++) {
@@ -549,19 +550,28 @@ The package includes a built-in route observer that automatically tracks navigat
 
 ```dart
 MaterialApp(
-  navigatorObservers: [NavService.instance.routeObserver],
+  navigatorObservers: Nav.observers,
   // ...
 )
 ```
 
 ## 9. API Reference
 
-### NavService
+### Nav
 
-Main navigation service singleton.
+Main navigation class providing centralized access to page and link services.
 
 #### Configuration Methods
-- `init(NavServiceConfig config)` - Initialize the service with routes and configuration
+- `init(NavConfig config)` - Initialize the services with routes and configuration
+
+#### Static Properties
+- `Nav.page` - Access to PageService for route navigation
+- `Nav.link` - Access to LinkService for deep link handling  
+- `Nav.observers` - Built-in navigation observers
+
+### PageService (Nav.page)
+
+Core page navigation service.
 
 #### Navigation Methods
 - `push<T>(String path, {Map<String, dynamic>? extra})` - Push new route
@@ -582,13 +592,16 @@ Main navigation service singleton.
 - `pushAll(List<NavRouteInfo> routeInfos)` - Push multiple routes
 - `replaceAll(List<NavRouteInfo> routeInfos)` - Replace all routes
 
-#### Deep Linking
-- `openUrl(String url)` - Handle deep links via registered link handlers
-
 #### Properties
 - `navigationHistory` - List of navigation steps
 - `joinedLocation` - Current location path
-- `routeObserver` - Built-in route observer
+
+### LinkService (Nav.link)
+
+Deep link handling service.
+
+#### Methods
+- `openUrl(String url)` - Handle deep links via registered link handlers
 
 ### Core Classes
 
@@ -597,9 +610,44 @@ Main navigation service singleton.
 - **NavExtra** - Container for extra data passed between routes
 - **NavStep** - Represents a step in navigation history
 - **NavRouteInfo** - Simple route information for bulk operations
-- **NavServiceConfig** - Configuration object for initializing NavService
+- **NavConfig** - Configuration object for initializing navigation services
 - **NavLinkHandler** - Abstract class for defining deep link handlers
 - **NavLinkResult** - Contains matched route path, path parameters, and query parameters
+
+## 10. Ultilities
+
+### PageAware
+
+`PageAware` is a small utility widget that integrates with the package's
+built-in `RouteObserver` to provide easy hooks for common route lifecycle
+events: initialization, disposal, appearance/disappearance, and a callback
+after the first frame (optionally waiting for the route transition to
+complete).
+
+Example usage:
+
+```dart
+PageAware(
+  onInit: () => debugPrint('init'),
+  onAfterFirstFrame: () => debugPrint('after first frame'),
+  onAppear: () => debugPrint('appeared'),
+  onDisappear: () => debugPrint('disappeared'),
+  onDispose: () => debugPrint('disposed'),
+  waitForTransition: true, // optionally wait for route animation
+  child: Scaffold(...),
+)
+```
+
+Notes:
+- **onInit / onDispose**: called during the widget's `initState` and `dispose`.
+- **onAfterFirstFrame**: called after the first frame; if `waitForTransition`
+  is true, the callback waits until the route's push animation completes.
+- **onAppear / onDisappear**: called when this route becomes visible or hidden
+  due to navigation events (uses `RouteAware` hooks).
+
+`PageAware` is convenient for analytics, lazy-loading content when a screen
+becomes visible, or coordinating animations that depend on route transitions.
+
 
 ## Contributing
 
@@ -607,4 +655,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the BSD-3-Clause License - see the LICENSE file for details.

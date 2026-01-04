@@ -1,6 +1,41 @@
-part of 'nav_service.dart';
+import 'package:flutter/widgets.dart';
 
-extension LinkingServiceExt on NavService {
+import '../../common/models/models.dart';
+
+class LinkService {
+  factory LinkService() => instance;
+
+  // Private constructor
+  LinkService._internal();
+  // Singleton instance
+  static final LinkService instance = LinkService._internal();
+
+  late GlobalKey<NavigatorState> _navigatorKey;
+  bool _enableLogger = true;
+
+  final List<String> _linkPrefixes = [];
+  final List<NavLinkHandler> _linkHandlers = [];
+
+  BuildContext? get _context => _navigatorKey.currentContext;
+
+  /// Initialize the LinkingService with configuration
+  ///
+  /// Clean up previous configuration if exists
+  void init(NavLinkServiceConfig config) {
+    _navigatorKey = config.navigatorKey;
+
+    _enableLogger = config.enableLogger;
+
+    if (config.linkPrefixes != null) {
+      _linkPrefixes.clear();
+      _linkPrefixes.addAll(config.linkPrefixes!);
+    }
+
+    if (config.linkHandlers != null) {
+      _initLinkHandlers(config.linkHandlers!);
+    }
+  }
+
   /// Open a URL and handle navigation based on registered link handlers
   ///
   /// [url] The URL to be opened
@@ -105,7 +140,17 @@ extension LinkingServiceExt on NavService {
             pathParameters: pathParameters,
             queryParameters: queryParameters,
           );
-          linkHandler.onRedirect(result);
+
+          if (_context == null) {
+            if (_enableLogger) {
+              debugPrint(
+                'LinkingService._linking: Navigator context is null, '
+                'cannot perform navigation for path: $path',
+              );
+            }
+          } else {
+            linkHandler.onRedirect(_context!, result);
+          }
         }
       }
     }

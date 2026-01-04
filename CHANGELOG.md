@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-01-04
+
+### Added
+- **New Nav API Structure**: Complete API redesign with centralized `Nav` class
+  - `Nav.page` - Access to PageService for route navigation
+  - `Nav.link` - Access to LinkService for deep link handling
+  - `Nav.observers` - Built-in navigation observers
+- **PageService**: Comprehensive navigation service with methods like `push()`, `pop()`, `navigate()`, `replace()`, etc.
+- **LinkService**: Dedicated service for deep link handling with `openUrl()` method
+- **PageAware Widget**: New widget that responds to navigation events that can be used to provide context-aware navigation updates and lifecycle listening
+- **NavConfig**: New configuration class (replaces NavServiceConfig)
+- **Deep Link Context**: Supported widget context in deep link handler `onRedirect`
+
+### Changed
+- **BREAKING**: Migrated from NavService.instance pattern to Nav.page/Nav.link static access
+- **BREAKING**: NavServiceConfig renamed to NavConfig  
+- **BREAKING**: NavAware widget renamed to PageAware
+- **License**: Changed from MIT to BSD-3-Clause License
+- **Import Path**: Now use `import 'package:flutter_nav/flutter_nav.dart';`
+- **Navigation Observers**: Use `Nav.observers` instead of individual service observers
+
+### Enhanced
+- **Documentation**: Comprehensive README updates with new API examples
+- **Test Suite**: Complete test rewrite and validation (19/19 tests passing)
+
+### Fixed
+- **Test Structure**: Fixed all test compilation and runtime issues with new API
+
+### Migration Guide
+- Replace `NavService.instance.push()` with `Nav.page.push()`
+- Replace `NavService.instance.openUrl()` with `Nav.link.openUrl()`
+- Replace `NavServiceConfig` with `NavConfig`
+- Replace `NavService.instance.init` with `Nav.init`
+- Update imports to `package:flutter_nav/flutter_nav.dart`
+- Use `Nav.observers` in MaterialApp navigatorObservers
+
 ## [0.3.3] - 2026-01-03
 
 ### Added

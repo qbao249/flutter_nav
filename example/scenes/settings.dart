@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:advanced_nav_service/nav_service.dart';
+import 'package:flutter_nav/flutter_nav.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key, required this.state});
@@ -50,14 +50,14 @@ class SettingsScreen extends StatelessWidget {
             ],
             ElevatedButton(
               onPressed: () {
-                NavService.instance.push('/home');
+                Nav.page.push('/home');
               },
               child: const Text('Push Home'),
             ),
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: () {
-                NavService.instance.push(
+                Nav.page.push(
                   '/profile',
                   extra: {'userId': 789, 'source': 'settings'},
                 );
@@ -67,7 +67,7 @@ class SettingsScreen extends StatelessWidget {
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: () {
-                NavService.instance.replaceAll([
+                Nav.page.replaceAll([
                   NavRouteInfo(path: '/home'),
                   NavRouteInfo(path: '/profile', extra: {'resetNav': true}),
                 ]);
@@ -84,7 +84,7 @@ class SettingsScreen extends StatelessWidget {
             ElevatedButton(
               onPressed: () {
                 // Test deep linking with scheme URL
-                NavService.instance.openUrl('myapp://profile/123?source=app');
+                Nav.link.openUrl('myapp://profile/123?source=app');
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
               child: const Text('Test Deep Link: Profile'),
@@ -93,7 +93,7 @@ class SettingsScreen extends StatelessWidget {
             ElevatedButton(
               onPressed: () {
                 // Test deep linking with domain URL
-                NavService.instance.openUrl(
+                Nav.link.openUrl(
                   'https://myapp.com/settings/notifications?enabled=true',
                 );
               },
@@ -104,7 +104,7 @@ class SettingsScreen extends StatelessWidget {
             ElevatedButton(
               onPressed: () {
                 // Test user profile deep link
-                NavService.instance.openUrl('myapp://user/456?tab=activity');
+                Nav.link.openUrl('myapp://user/456?tab=activity');
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
               child: const Text('Test User Profile Link'),
@@ -115,8 +115,8 @@ class SettingsScreen extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton(
                     onPressed:
-                        NavService.instance.canPop()
-                            ? () => NavService.instance.pop('settings_result')
+                        Nav.page.canPop()
+                            ? () => Nav.page.pop('settings_result')
                             : null,
                     child: const Text('Pop with Result'),
                   ),
@@ -125,7 +125,7 @@ class SettingsScreen extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
-                      NavService.instance.popUntilPath('/home');
+                      Nav.page.popUntilPath('/home');
                     },
                     child: const Text('Pop Until Home'),
                   ),

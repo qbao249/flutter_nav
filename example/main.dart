@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:advanced_nav_service/nav_service.dart';
+import 'package:flutter_nav/flutter_nav.dart';
 
 import 'links/profile_link_handler.dart';
 import 'links/settings_link_handler.dart';
@@ -10,8 +10,8 @@ import 'scenes/settings.dart';
 final navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
-  NavService.instance.init(
-    NavServiceConfig(
+  Nav.init(
+    NavConfig(
       navigatorKey: navigatorKey,
       routes: navRoutes,
       enableLogger: true,
@@ -30,7 +30,7 @@ class NavServiceExample extends StatelessWidget {
     return MaterialApp(
       title: 'NavService Example',
       navigatorKey: navigatorKey,
-      navigatorObservers: [NavService.instance.routeObserver],
+      navigatorObservers: [...Nav.observers],
       theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
       home: const LaunchScreen(),
     );
@@ -52,7 +52,7 @@ class _LaunchScreenState extends State<LaunchScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Replace with setup process here
       await Future.delayed(const Duration(seconds: 1));
-      NavService.instance.replaceAll([
+      Nav.page.replaceAll([
         NavRouteInfo(path: '/home'),
         NavRouteInfo(path: '/settings'),
       ]);

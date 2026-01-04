@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:advanced_nav_service/nav_service.dart';
+import 'package:flutter_nav/flutter_nav.dart';
 
 class ProfileLinkHandler extends NavLinkHandler {
   @override
@@ -10,7 +10,7 @@ class ProfileLinkHandler extends NavLinkHandler {
   ];
 
   @override
-  void onRedirect(NavLinkResult result) {
+  void onRedirect(BuildContext context, NavLinkResult result) {
     // Handle any additional logic on redirect if needed
     debugPrint(
       'Redirected to Profile with result: matchedPath=${result.matchedRoutePath}, '
@@ -19,7 +19,7 @@ class ProfileLinkHandler extends NavLinkHandler {
     );
 
     // Navigate to Profile using NavService
-    NavService.instance.navigate(
+    Nav.page.navigate(
       '/profile',
       extra: {...result.pathParameters, ...result.queryParameters},
     );
