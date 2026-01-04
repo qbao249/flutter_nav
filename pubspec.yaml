@@ -1,15 +1,15 @@
 name: flutter_nav
 description: A comprehensive navigation package for Flutter applications providing routing, page navigation, deep linking, and navigation state management utilities.
-version: 0.4.0
+version: 0.4.1
 topics:
   - flutter-nav
   - navigation
   - navigator
   - router
   - deep-linking
-homepage: https://github.com/qbao249/nav_service
-repository: https://github.com/qbao249/nav_service
-issue_tracker: https://github.com/qbao249/nav_service/issues
+homepage: https://github.com/qbao249/flutter_nav
+repository: https://github.com/qbao249/flutter_nav
+issue_tracker: https://github.com/qbao249/flutter_nav/issues
 license: BSD-3-Clause
 
 environment:

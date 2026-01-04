@@ -11,7 +11,9 @@ export 'services/services.dart';
 export 'widgets/widgets.dart';
 
 class Nav {
-  static final observers = <NavigatorObserver>[pageRouteObserverInstance];
+  static final List<NavigatorObserver> observers = <NavigatorObserver>[
+    pageRouteObserverInstance,
+  ];
 
   static final PageService page = PageService.instance;
 
@@ -20,7 +22,7 @@ class Nav {
   /// Initialize the Nav system with the provided configuration
   ///
   /// [config] The navigation configuration
-  static init(NavConfig config) {
+  static void init(NavConfig config) {
     page.init(
       NavPageServiceConfig(
         navigatorKey: config.navigatorKey,

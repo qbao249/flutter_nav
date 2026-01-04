@@ -41,6 +41,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update imports to `package:flutter_nav/flutter_nav.dart`
 - Use `Nav.observers` in MaterialApp navigatorObservers
 
+## [0.4.1] - 2026-01-05
+
+### Fixed
+- **Lint**: Added explicit type annotations for `Nav.observers` and `Nav.init` to satisfy analyzer/lints.
+
+### Misc
+- Bumped package version to `0.4.1`.
+
 ## [0.3.3] - 2026-01-03
 
 ### Added
