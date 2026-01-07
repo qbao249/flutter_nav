@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
@@ -6,6 +7,7 @@ import '../../common/common.dart';
 import '../../common/page_route_observer_instance.dart';
 
 part 'navigator_inheritance_service_ext.dart';
+part 'persistance_service_ext.dart';
 
 class PageService {
   // Factory returns the single instance
