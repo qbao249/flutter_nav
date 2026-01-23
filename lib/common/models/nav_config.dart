@@ -1,6 +1,7 @@
 import '../models/nav_route.dart';
 import '../models/nav_link_handler.dart';
 import '../models/nav_base_config.dart';
+import '../models/nav_page_service_config.dart';
 
 class NavConfig extends NavBaseConfig {
   const NavConfig({
@@ -9,6 +10,7 @@ class NavConfig extends NavBaseConfig {
     super.enableLogger,
     this.linkPrefixes,
     this.linkHandlers,
+    this.pagePersistence,
   });
 
   /// List of navigation routes
@@ -19,4 +21,7 @@ class NavConfig extends NavBaseConfig {
 
   /// List of link handlers to process specific link patterns.
   final List<NavLinkHandler>? linkHandlers;
+
+  /// Configuration for page persistence.
+  final NavPagePersistence? pagePersistence;
 }

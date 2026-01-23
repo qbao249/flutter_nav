@@ -2,9 +2,26 @@ part of 'page_service.dart';
 
 /// Extension methods for persisting and restoring routes
 extension PersistenceServiceExt on PageService {
+  /// Persists the current navigation history using the configured
+  /// persistence handler
+  Future<void> persist() async {
+    final onPersist = _persistence?.onPersist;
+    if (onPersist == null) return;
+    final data = persistBase();
+    await onPersist(data);
+  }
+
+  /// Restores navigation history using the configured persistence handler
+  Future<void> restore() async {
+    final onRestore = _persistence?.onRestore;
+    if (onRestore == null) return;
+    final data = await onRestore();
+    restoreBase(data);
+  }
+
   /// Persists the current navigation history to a serializable format
   /// Returns a list of maps containing path and extra data for each route
-  List<Map<String, dynamic>> persistHistory() {
+  List<Map<String, dynamic>> persistBase() {
     try {
       return _steps.map((step) {
         final data = <String, dynamic>{'path': step.path};
@@ -26,7 +43,7 @@ extension PersistenceServiceExt on PageService {
 
   /// Restores navigation history from persisted data
   /// [data] should be a List<Map<String, dynamic>> containing route information
-  void restoreHistory(dynamic data) {
+  void restoreBase(dynamic data) {
     try {
       final validatedRoutes = _validateAndParseRoutes(data);
       if (validatedRoutes.isEmpty) {
