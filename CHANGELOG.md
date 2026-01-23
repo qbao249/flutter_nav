@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-01-23
+
+### Added
+- **Navigation State Persistence**: Complete persistence system for saving and restoring navigation state
+  - `NavPagePersistence` configuration class with `onPersist` and `onRestore` callbacks
+  - `NavPagePersistenceSchedule` for configuring persistence timing (immediate and/or interval-based)
+  - `persist()` and `restore()` methods in PageService for manual persistence control
+  - `launched()` method to initialize app with restored or default routes
+  - Automatic persistence on navigation changes when `immediate: true` is set
+  - Periodic persistence with configurable `Duration` intervals
+  - Comprehensive error handling and validation for persisted data
+  - Serialization checks to ensure safe data persistence
+
+### Enhanced
+- **NavConfig**: Added `pagePersistence` property for persistence configuration
+- **NavPageServiceConfig**: Added `persistence` property to support persistence features
+- **Documentation**: Added persistence section to README with complete examples
+- **Example**: Updated example app to demonstrate persistence with SharedPreferences
+
 ## [0.4.0] - 2026-01-04
 
 ### Added

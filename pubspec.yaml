@@ -1,6 +1,6 @@
 name: flutter_nav
 description: A comprehensive navigation package for Flutter applications providing routing, page navigation, deep linking, and navigation state management utilities.
-version: 0.4.1
+version: 0.5.0
 topics:
   - flutter-nav
   - navigation

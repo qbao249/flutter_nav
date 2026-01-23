@@ -598,6 +598,192 @@ void main() {
       expect(result.queryParameters, equals({'tab': 'details'}));
     });
   });
+
+  group('Navigation Persistence', () {
+    late GlobalKey<NavigatorState> navigatorKey;
+    List<Map<String, dynamic>>? persistedData;
+
+    setUp(() {
+      navigatorKey = GlobalKey<NavigatorState>();
+      persistedData = null;
+    });
+
+    testWidgets('should persist navigation state', (WidgetTester tester) async {
+      final routes = [
+        NavRoute(path: '/home', builder: (context, state) => Container()),
+        NavRoute(path: '/profile', builder: (context, state) => Container()),
+        NavRoute(path: '/settings', builder: (context, state) => Container()),
+      ];
+
+      Nav.init(
+        NavConfig(
+          routes: routes,
+          navigatorKey: navigatorKey,
+          enableLogger: false,
+          pagePersistence: NavPagePersistence(
+            onPersist: (routes) async {
+              persistedData = routes;
+            },
+            onRestore: () async {
+              return persistedData ?? [];
+            },
+            enableSchedule: true,
+            schedule: NavPagePersistenceSchedule(immediate: true),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorKey: navigatorKey,
+          navigatorObservers: Nav.observers,
+          home: Container(),
+        ),
+      );
+
+      // Simulate app launch
+      await Nav.page.launched([NavRouteInfo(path: '/home')]);
+      await tester.pumpAndSettle();
+
+      // Verify initial persistence
+      expect(persistedData, isNotNull);
+      expect(persistedData!.length, equals(1));
+      expect(persistedData![0]['path'], equals('/home'));
+
+      // Navigate to profile
+      Nav.page.push('/profile');
+      await tester.pumpAndSettle();
+
+      // Verify persistence after navigation
+      expect(persistedData!.length, equals(2));
+      expect(persistedData![1]['path'], equals('/profile'));
+    });
+
+    testWidgets('should restore navigation state', (WidgetTester tester) async {
+      // Setup persisted data AFTER building the widget to avoid initial route clearing it
+      final routes = [
+        NavRoute(
+          path: '/home',
+          builder: (context, state) {
+            return const Scaffold(body: Text('Home'));
+          },
+        ),
+        NavRoute(
+          path: '/profile',
+          builder: (context, state) {
+            return const Scaffold(body: Text('Profile'));
+          },
+        ),
+      ];
+
+      // Start with empty persisted data
+      persistedData = null;
+
+      Nav.init(
+        NavConfig(
+          routes: routes,
+          navigatorKey: navigatorKey,
+          enableLogger: false,
+          pagePersistence: NavPagePersistence(
+            onPersist: (routes) async {
+              persistedData = routes;
+            },
+            onRestore: () async {
+              return persistedData ?? [];
+            },
+            enableSchedule: true,
+            schedule: NavPagePersistenceSchedule(immediate: true),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorKey: navigatorKey,
+          navigatorObservers: Nav.observers,
+          home: const Scaffold(body: Text('Initial')),
+        ),
+      );
+
+      // First launch with /profile
+      await Nav.page.launched([NavRouteInfo(path: '/profile')]);
+      await tester.pumpAndSettle();
+
+      // Verify /profile was navigated to and persisted
+      expect(Nav.page.navigationHistory.length, equals(1));
+      expect(
+        Nav.page.navigationHistory[0].currentState.path,
+        equals('/profile'),
+      );
+      expect(find.text('Profile'), findsOneWidget);
+
+      // Verify it was persisted
+      expect(persistedData, isNotNull);
+      expect(persistedData!.length, equals(1));
+      expect(persistedData![0]['path'], equals('/profile'));
+
+      // Now simulate app restart by calling launched() again with different default
+      // It should restore the persisted /profile route
+      await Nav.page.launched([NavRouteInfo(path: '/home')]);
+      await tester.pumpAndSettle();
+
+      // Should still be on /profile (restored), not /home (default)
+      expect(Nav.page.navigationHistory.length, equals(1));
+      expect(
+        Nav.page.navigationHistory[0].currentState.path,
+        equals('/profile'),
+      );
+      expect(find.text('Profile'), findsOneWidget);
+    });
+
+    testWidgets('should use default routes when no persisted data', (
+      WidgetTester tester,
+    ) async {
+      persistedData = null;
+
+      final routes = [
+        NavRoute(path: '/home', builder: (context, state) => Container()),
+        NavRoute(path: '/welcome', builder: (context, state) => Container()),
+      ];
+
+      Nav.init(
+        NavConfig(
+          routes: routes,
+          navigatorKey: navigatorKey,
+          enableLogger: false,
+          pagePersistence: NavPagePersistence(
+            onPersist: (routes) async {
+              persistedData = routes;
+            },
+            onRestore: () async {
+              return persistedData ?? [];
+            },
+            enableSchedule: true,
+            schedule: NavPagePersistenceSchedule(immediate: true),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorKey: navigatorKey,
+          navigatorObservers: Nav.observers,
+          home: Container(),
+        ),
+      );
+
+      // Launch with default routes
+      await Nav.page.launched([NavRouteInfo(path: '/welcome')]);
+      await tester.pumpAndSettle();
+
+      // Verify default route is used
+      expect(Nav.page.navigationHistory.length, equals(1));
+      expect(
+        Nav.page.navigationHistory[0].currentState.path,
+        equals('/welcome'),
+      );
+    });
+  });
 }
 
 // Test helper class
