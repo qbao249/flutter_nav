@@ -28,6 +28,7 @@ class Nav {
         navigatorKey: config.navigatorKey,
         enableLogger: config.enableLogger,
         routes: config.routes,
+        persistence: config.pagePersistence,
       ),
     );
     link.init(

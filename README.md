@@ -10,10 +10,11 @@ A comprehensive navigation package for Flutter applications providing routing, n
 4. [Core Navigation](#4-core-navigation)
 5. [Deep Linking](#5-deep-linking)
 6. [GoRouter Integration](#6-gorouter-integration)
-7. [Working with Extra Data](#7-working-with-extra-data)
-8. [Navigation History & Debugging](#8-navigation-history--debugging)
-9. [API Reference](#9-api-reference)
-10. [Ultilities](#10-ultilities)
+7. [Navigation State Persistence](#7-navigation-state-persistence)
+8. [Working with Extra Data](#8-working-with-extra-data)
+9. [Navigation History & Debugging](#9-navigation-history--debugging)
+10. [API Reference](#10-api-reference)
+11. [Ultilities](#11-ultilities)
 
 ## 1. Installation
 
@@ -21,7 +22,7 @@ Add this package to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_nav: ^0.4.0
+  flutter_nav: ^0.5.0
 ```
 
 Then run:
@@ -41,6 +42,7 @@ flutter pub get
 - **🔍 Navigation Debugging**: Built-in logging and navigation history inspection
 - **⚡ Performance Optimized**: Efficient route management with minimal overhead
 - **🔗 Deep Linking Handling**: Complete infrastructure for handling custom URLs with path parameters extraction and flexible link handlers
+- **💿 Navigation State Persistence**: Save and restore navigation state with scheduled or immediate persistence
 - **🧰 Utilities**: Navigation utilities to make routing easier and more efficient 
 ## 3. Standalone Setup
 
@@ -324,7 +326,7 @@ class SettingsLinkHandler extends NavLinkHandler {
 
 ```yaml
 dependencies:
-  flutter_nav: ^0.4.0
+  flutter_nav: ^0.5.0
   app_links: ^latest_version
 ```
 
@@ -405,6 +407,199 @@ Nav.link.openUrl('https://myapp.com/profile/456?source=share');
 - **Custom schemes**: `myapp://`, `yourapp://`
 - **Universal links**: `https://domain.com/`
 
+## 7. Navigation State Persistence
+
+Flutter Nav provides a comprehensive persistence system to save and restore your navigation state. This is useful for maintaining user navigation across app restarts.
+
+**Note**: Navigation state persistence works best with the standalone approach (using `Nav.page` methods directly). The base persistence mechanism is flexible and can be adapted to fit your needs, even when integrating with other navigation solutions. However, if you're primarily using GoRouter, consider using GoRouter's own state restoration features for better compatibility.
+
+### Basic Setup
+
+Configure persistence when initializing `Nav`:
+
+```dart
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+
+final restorationId = 'app_restoration_id';
+
+Nav.init(
+  NavConfig(
+    navigatorKey: navigatorKey,
+    routes: routes,
+    enableLogger: true,
+    pagePersistence: NavPagePersistence(
+      // Called to save navigation state
+      onPersist: (routes) async {
+        final pref = await SharedPreferences.getInstance();
+        pref.setString(restorationId, jsonEncode(routes));
+      },
+      // Called to restore navigation state
+      onRestore: () async {
+        final pref = await SharedPreferences.getInstance();
+        final jsonString = pref.getString(restorationId);
+        if (jsonString != null) {
+          final List<dynamic> data = jsonDecode(jsonString);
+          return List<Map<String, dynamic>>.from(data);
+        }
+        return [];
+      },
+      enableSchedule: true,
+      schedule: NavPagePersistenceSchedule(
+        immediate: true,  // Persist on every navigation change
+        interval: Duration(seconds: 30),  // Also persist every 30 seconds
+      ),
+    ),
+  ),
+);
+```
+
+### Launch with Restoration
+
+Use `launched()` method to initialize your app with restored or default routes:
+
+```dart
+void main() {
+  Nav.init(NavConfig(...));
+  runApp(MyApp());
+}
+
+class MyApp extends StatefulWidget {
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Simulate app initialization (auth, loading, etc.)
+      await Future.delayed(const Duration(seconds: 2));
+      
+      // Launch with default routes - will restore if available
+      Nav.page.launched([
+        NavRouteInfo(path: '/home'),
+      ]);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      navigatorKey: navigatorKey,
+      navigatorObservers: Nav.observers,
+      home: PlashScreen(),  // Show splash while initializing
+    );
+  }
+}
+
+class PlashScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(child: CircularProgressIndicator()),
+    );
+  }
+}
+```
+
+### Persistence Options
+
+#### Immediate Persistence
+
+Automatically persist navigation state on every route change:
+
+```dart
+NavPagePersistence(
+  onPersist: (routes) async { /* save */ },
+  onRestore: () async { /* restore */ },
+  enableSchedule: true,
+  schedule: NavPagePersistenceSchedule(immediate: true),
+)
+```
+
+#### Interval-Based Persistence
+
+Persist at regular intervals:
+
+```dart
+NavPagePersistence(
+  onPersist: (routes) async { /* save */ },
+  onRestore: () async { /* restore */ },
+  enableSchedule: true,
+  schedule: NavPagePersistenceSchedule(
+    interval: Duration(seconds: 30),  // Persist every 30 seconds
+  ),
+)
+```
+
+#### Combined Persistence
+
+Use both immediate and interval-based persistence:
+
+```dart
+NavPagePersistence(
+  onPersist: (routes) async { /* save */ },
+  onRestore: () async { /* restore */ },
+  enableSchedule: true,
+  schedule: NavPagePersistenceSchedule(
+    immediate: true,
+    interval: Duration(minutes: 1),
+  ),
+)
+```
+
+### Manual Persistence
+
+You can also manually trigger persistence:
+
+```dart
+// Manually persist current navigation state
+await Nav.page.persist();
+
+// Manually restore navigation state
+await Nav.page.restore();
+```
+
+### Storage Options
+
+You can use various storage solutions for persisting navigation state:
+
+#### SharedPreferences (Simple)
+
+```dart
+NavPagePersistence(
+  onPersist: (routes) async {
+    final pref = await SharedPreferences.getInstance();
+    await pref.setString('nav_state', jsonEncode(routes));
+  },
+  onRestore: () async {
+    final pref = await SharedPreferences.getInstance();
+    final jsonString = pref.getString('nav_state');
+    if (jsonString != null) {
+      final List<dynamic> data = jsonDecode(jsonString);
+      return List<Map<String, dynamic>>.from(data);
+    }
+    return [];
+  },
+  enableSchedule: true,
+  schedule: NavPagePersistenceSchedule(immediate: true),
+)
+```
+
+**Note**: Navigation state typically contains only route paths and serializable extra data (user IDs, tab selections, etc.). This is generally not sensitive data. If you need to persist sensitive information like authentication tokens or passwords, store those separately using secure storage solutions, not as part of navigation state.
+
+### Important Notes
+
+- Only serializable extra data will be persisted (String, num, bool, List, Map)
+- Complex objects in `extra` should be converted to maps before passing
+- The `launched()` method automatically restores persisted state if available
+- Scheduled persistence (immediate/interval) only works when `enableSchedule: true` is set
+- Manual `persist()` and `restore()` methods can be used independently without scheduling
+- Failed restoration automatically falls back to default routes
+
+
 ## 6. GoRouter Integration
 
 ### Setup
@@ -413,7 +608,7 @@ Nav.link.openUrl('https://myapp.com/profile/456?source=share');
 
 ```yaml
 dependencies:
-  flutter_nav: ^0.4.0
+  flutter_nav: ^0.5.0
   go_router: ^latest_version
 ```
 
@@ -482,7 +677,7 @@ ElevatedButton(
   - **Use GoRouter for**: Static routes, initial redirects, resetting all routes
   - **Use NavService for**: Dynamic routes, push notifications, unpredictable navigation flows
 
-## 7. Working with Extra Data
+## 8. Working with Extra Data
 
 ### Passing Data
 
@@ -527,7 +722,7 @@ class ProfileScreen extends StatelessWidget {
 }
 ```
 
-## 8. Navigation History & Debugging
+## 9. Navigation History & Debugging
 
 ### Accessing Navigation History
 
@@ -555,7 +750,7 @@ MaterialApp(
 )
 ```
 
-## 9. API Reference
+## 10. API Reference
 
 ### Nav
 
@@ -596,6 +791,11 @@ Core page navigation service.
 - `navigationHistory` - List of navigation steps
 - `joinedLocation` - Current location path
 
+#### Persistence Methods
+- `launched(List<NavRouteInfo> routes)` - Initialize app with restored or default routes
+- `persist()` - Manually persist current navigation state
+- `restore()` - Manually restore navigation state
+
 ### LinkService (Nav.link)
 
 Deep link handling service.
@@ -606,10 +806,12 @@ Deep link handling service.
 ### Core Classes
 
 - **NavRoute** - Defines a route with path and builder function
-- **NavState** - Contains route path and extra data for each navigation state
-- **NavExtra** - Container for extra data passed between routes
-- **NavStep** - Represents a step in navigation history
-- **NavRouteInfo** - Simple route information for bulk operations
+- **NavPagePersistence** - Configuration for navigation state persistence
+- **NavPagePersistenceSchedule** - Schedule configuration for persistence timing
+- **NavLinkHandler** - Abstract class for defining deep link handlers
+- **NavLinkResult** - Contains matched route path, path parameters, and query parameters
+
+## 11avRouteInfo** - Simple route information for bulk operations
 - **NavConfig** - Configuration object for initializing navigation services
 - **NavLinkHandler** - Abstract class for defining deep link handlers
 - **NavLinkResult** - Contains matched route path, path parameters, and query parameters
